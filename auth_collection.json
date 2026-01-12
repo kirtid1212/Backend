@@ -1,0 +1,231 @@
+{
+  "info": {
+    "name": "OTP Backend APIs (Complete & Final)",
+    "_postman_id": "f3c8d2a1-otp-backend-collection-final",
+    "description": "Signup, Login, Login with OTP, Forgot Password using Mobile OTP + Resend OTP, Logout, Profile",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+
+    {
+      "name": "SIGNUP - Send OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"name\": \"Rutuja Hinge\",\n  \"type\": \"signup\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/send-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "send-otp"]
+        }
+      }
+    },
+
+    {
+      "name": "SIGNUP - Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"otp\": \"ENTER_REAL_OTP\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/verify-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "verify-otp"]
+        }
+      }
+    },
+
+    {
+      "name": "SIGNUP - Set Password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rutuja Hinge\",\n  \"mobile\": \"8777804236\",\n  \"password\": \"Password@123\",\n  \"confirmPassword\": \"Password@123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/set-password",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "set-password"]
+        }
+      }
+    },
+
+    {
+      "name": "LOGIN - With Password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"password\": \"Password@123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "login"]
+        }
+      }
+    },
+
+    {
+      "name": "LOGIN OTP - Send OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"type\": \"login\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/send-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "send-otp"]
+        }
+      }
+    },
+
+    {
+      "name": "LOGIN OTP - Verify & Login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"otp\": \"ENTER_REAL_OTP\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/login-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "login-otp"]
+        }
+      }
+    },
+
+    {
+      "name": "FORGOT PASSWORD - Send OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"type\": \"forgot\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/send-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "send-otp"]
+        }
+      }
+    },
+
+    {
+      "name": "FORGOT PASSWORD - Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"otp\": \"ENTER_REAL_OTP\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/verify-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "verify-otp"]
+        }
+      }
+    },
+
+    {
+      "name": "FORGOT PASSWORD - Reset Password",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"password\": \"NewPassword@123\",\n  \"confirmPassword\": \"NewPassword@123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/set-password",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "set-password"]
+        }
+      }
+    },
+
+    {
+      "name": "RESEND OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobile\": \"8777804236\",\n  \"type\": \"signup\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/auth/reset-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "reset-otp"]
+        }
+      }
+    },
+
+    {
+      "name": "LOGOUT",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "http://localhost:5000/auth/logout",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["auth", "logout"]
+        }
+      }
+    },
+
+    {
+      "name": "GET USER PROFILE",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "http://localhost:5000/user/me",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["user", "me"]
+        }
+      }
+    }
+
+  ]
+}
