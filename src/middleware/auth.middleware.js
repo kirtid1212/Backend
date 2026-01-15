@@ -16,7 +16,7 @@ const authenticate = (req, res, next) => {
     req.user = {
       id: decoded.sub,
       role: decoded.role,
-      phone: decoded.phone
+      email: decoded.email
     };
     next();
   } catch (err) {

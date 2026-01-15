@@ -10,24 +10,24 @@
       "value": "http://localhost:3000"
     },
     {
-      "key": "phone",
-      "value": "+919999999999"
-    },
-    {
-      "key": "name",
+      "key": "userName",
       "value": "Rahul"
     },
     {
-      "key": "otp",
-      "value": "123456"
+      "key": "userEmail",
+      "value": "rahul@example.com"
     },
     {
-      "key": "adminPhone",
-      "value": "+919999999998"
+      "key": "userPassword",
+      "value": "UserPass123!"
     },
     {
-      "key": "adminOtp",
-      "value": "123456"
+      "key": "adminEmail",
+      "value": "admin@example.com"
+    },
+    {
+      "key": "adminPassword",
+      "value": "admin-password"
     },
     {
       "key": "accessToken",
@@ -80,10 +80,6 @@
     {
       "key": "orderId",
       "value": ""
-    },
-    {
-      "key": "adminSignupSecret",
-      "value": ""
     }
   ],
   "item": [
@@ -103,132 +99,48 @@
     {
       "name": "01 Admin Setup",
       "item": [
+    {
+      "name": "Admin Login",
+      "event": [
         {
-          "name": "Admin OTP Send (Signup)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"phone\":\"{{adminPhone}}\",\"purpose\":\"signup\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/auth/otp/send"
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const json = pm.response.json();",
+              "  if (json && json.tokens) {",
+              "    pm.collectionVariables.set('adminAccessToken', json.tokens.accessToken);",
+              "    pm.collectionVariables.set('adminRefreshToken', json.tokens.refreshToken);",
+              "  }",
+              "  if (json && json.user && json.user.id) {",
+              "    pm.collectionVariables.set('userId', json.user.id);",
+              "  }",
+              "}"
+            ]
           }
-        },
-        {
-          "name": "Admin Signup",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
-                  "  const json = pm.response.json();",
-                  "  if (json && json.tokens) {",
-                  "    pm.collectionVariables.set('adminAccessToken', json.tokens.accessToken);",
-                  "    pm.collectionVariables.set('adminRefreshToken', json.tokens.refreshToken);",
-                  "  }",
-                  "}"
-                ]
-              }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{adminEmail}}\",\"password\":\"{{adminPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "x-admin-signup-secret",
-                "value": "{{adminSignupSecret}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"name\":\"Admin\",\"phone\":\"{{adminPhone}}\",\"otp\":\"{{adminOtp}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/admin/auth/signup"
           }
         },
-        {
-          "name": "Admin OTP Send (Login)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"phone\":\"{{adminPhone}}\",\"purpose\":\"login\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/auth/otp/send"
-          }
-        },
-        {
-          "name": "Admin Login",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
-                  "  const json = pm.response.json();",
-                  "  if (json && json.tokens) {",
-                  "    pm.collectionVariables.set('adminAccessToken', json.tokens.accessToken);",
-                  "    pm.collectionVariables.set('adminRefreshToken', json.tokens.refreshToken);",
-                  "  }",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"phone\":\"{{adminPhone}}\",\"otp\":\"{{adminOtp}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/admin/auth/login"
-          }
-        },
+        "url": "{{baseUrl}}/api/v1/admin/auth/login"
+      }
+    },
         {
           "name": "Admin Me",
           "request": {
@@ -809,211 +721,167 @@
     },
     {
       "name": "02 User Auth",
-      "item": [
+  "item": [
+    {
+      "name": "User Signup",
+      "event": [
         {
-          "name": "Send OTP (Signup)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"phone\":\"{{phone}}\",\"purpose\":\"signup\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/auth/otp/send"
-          }
-        },
-        {
-          "name": "Verify OTP (Signup)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
-                  "  const json = pm.response.json();",
-                  "  if (json && json.tokens) {",
-                  "    pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
-                  "  }",
-                  "  if (json && json.user && json.user.id) {",
-                  "    pm.collectionVariables.set('userId', json.user.id);",
-                  "  }",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"name\":\"{{name}}\",\"phone\":\"{{phone}}\",\"otp\":\"{{otp}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/auth/signup/verify"
-          }
-        },
-        {
-          "name": "Send OTP (Login)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"phone\":\"{{phone}}\",\"purpose\":\"login\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/auth/otp/send"
-          }
-        },
-        {
-          "name": "Verify OTP (Login)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
-                  "  const json = pm.response.json();",
-                  "  if (json && json.tokens) {",
-                  "    pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
-                  "  }",
-                  "  if (json && json.user && json.user.id) {",
-                  "    pm.collectionVariables.set('userId', json.user.id);",
-                  "  }",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"phone\":\"{{phone}}\",\"otp\":\"{{otp}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/auth/login/verify"
-          }
-        },
-        {
-          "name": "Refresh Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code >= 200 && pm.response.code < 300) {",
-                  "  const json = pm.response.json();",
-                  "  if (json && json.tokens) {",
-                  "    pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
-                  "    pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
-                  "  }",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"refreshToken\":\"{{refreshToken}}\"}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": "{{baseUrl}}/api/v1/auth/refresh"
-          }
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "POST",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/auth/logout"
-          }
-        },
-        {
-          "name": "Get My Profile",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": "{{baseUrl}}/api/v1/me"
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const json = pm.response.json();",
+              "  if (json && json.tokens) {",
+              "    pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+              "    pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+              "  }",
+              "  if (json && json.user && json.user.id) {",
+              "    pm.collectionVariables.set('userId', json.user.id);",
+              "  }",
+              "}"
+            ]
           }
         }
-      ]
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\":\"{{userName}}\",\"email\":\"{{userEmail}}\",\"password\":\"{{userPassword}}\",\"confirmPassword\":\"{{userPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/signup"
+      }
+    },
+    {
+      "name": "User Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const json = pm.response.json();",
+              "  if (json && json.tokens) {",
+              "    pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+              "    pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+              "  }",
+              "  if (json && json.user && json.user.id) {",
+              "    pm.collectionVariables.set('userId', json.user.id);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"{{userEmail}}\",\"password\":\"{{userPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/login"
+      }
+    },
+    {
+      "name": "Refresh Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code >= 200 && pm.response.code < 300) {",
+              "  const json = pm.response.json();",
+              "  if (json && json.tokens) {",
+              "    pm.collectionVariables.set('accessToken', json.tokens.accessToken);",
+              "    pm.collectionVariables.set('refreshToken', json.tokens.refreshToken);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"refreshToken\":\"{{refreshToken}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/api/v1/auth/refresh"
+      }
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/auth/logout"
+      }
+    },
+    {
+      "name": "Get My Profile",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/me"
+      }
+    }
+  ]
     },
     {
       "name": "03 Catalog",

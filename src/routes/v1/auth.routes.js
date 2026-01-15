@@ -4,9 +4,8 @@ const { authenticate } = require('../../middleware/auth.middleware');
 
 const router = express.Router();
 
-router.post('/otp/send', authController.sendOtp);
-router.post('/signup/verify', authController.verifySignup);
-router.post('/login/verify', authController.verifyLogin);
+router.post('/signup', authController.signup);
+router.post('/login', authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authenticate, authController.logout);
 

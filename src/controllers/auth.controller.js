@@ -1,6 +1,5 @@
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
-const { normalizePhone, isValidPhone } = require('../utils/phone');
-const { sendOtp, verifyOtp } = require('../services/otpService');
 const {
   issueTokens,
   verifyRefreshToken,
@@ -8,116 +7,70 @@ const {
   revokeUserTokens
 } = require('../utils/tokens');
 
-const sanitizeUser = (user) => {
-  return {
-    id: user._id,
-    name: user.name,
-    phone: user.phone,
-    role: user.role
-  };
-};
+const sanitizeUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role
+});
 
-const sendOtpHandler = async (req, res) => {
+const signup = async (req, res) => {
   try {
-    const { phone, purpose } = req.body;
-
-    if (!phone || !purpose) {
-      return res.status(400).json({ message: 'Phone and purpose are required' });
+    const { name, email, password, confirmPassword } = req.body;
+    if (!name || !email || !password || !confirmPassword) {
+      return res.status(400).json({ message: 'Name, email, password and confirmPassword are required' });
     }
 
-    if (!['signup', 'login'].includes(purpose)) {
-      return res.status(400).json({ message: 'Invalid purpose' });
+    if (password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
     }
 
-    const normalized = normalizePhone(phone);
-    if (!isValidPhone(normalized)) {
-      return res.status(400).json({ message: 'Invalid phone number' });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(409).json({ message: 'Email already registered' });
     }
 
-    const existingUser = await User.findOne({ phone: normalized });
-    if (purpose === 'signup' && existingUser) {
-      return res.status(409).json({ message: 'User already exists' });
-    }
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await User.create({
+      name,
+      email: normalizedEmail,
+      password: passwordHash,
+      role: 'user',
+      is_verified: true
+    });
 
-    if (purpose === 'login' && !existingUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    await sendOtp(normalized, purpose);
-    res.json({ success: true, message: 'OTP sent successfully' });
+    const tokens = await issueTokens(user);
+    res.status(201).json({ success: true, user: sanitizeUser(user), tokens });
   } catch (error) {
-    res.status(500).json({ message: 'OTP sending failed' });
+    console.error('Signup failed:', error.message);
+    res.status(500).json({ message: 'Signup failed' });
   }
 };
 
-const verifySignup = async (req, res) => {
+const login = async (req, res) => {
   try {
-    const { name, phone, otp } = req.body;
-    if (!name || !phone || !otp) {
-      return res.status(400).json({ message: 'Name, phone, and otp are required' });
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const normalized = normalizePhone(phone);
-    if (!isValidPhone(normalized)) {
-      return res.status(400).json({ message: 'Invalid phone number' });
-    }
-
-    const result = await verifyOtp(normalized, 'signup', otp);
-    if (!result.ok) {
-      return res.status(result.status).json({ message: result.message });
-    }
-
-    let user = await User.findOne({ phone: normalized });
-    if (user && user.is_verified) {
-      return res.status(409).json({ message: 'User already verified' });
-    }
-
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
     if (!user) {
-      user = await User.create({
-        name,
-        phone: normalized,
-        role: 'user',
-        is_verified: true
-      });
-    } else {
-      user.name = name;
-      user.is_verified = true;
-      await user.save();
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const tokens = await issueTokens(user);
     res.json({ success: true, user: sanitizeUser(user), tokens });
   } catch (error) {
-    res.status(500).json({ message: 'Signup verification failed' });
-  }
-};
-
-const verifyLogin = async (req, res) => {
-  try {
-    const { phone, otp } = req.body;
-    if (!phone || !otp) {
-      return res.status(400).json({ message: 'Phone and otp are required' });
-    }
-
-    const normalized = normalizePhone(phone);
-    if (!isValidPhone(normalized)) {
-      return res.status(400).json({ message: 'Invalid phone number' });
-    }
-
-    const user = await User.findOne({ phone: normalized });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const result = await verifyOtp(normalized, 'login', otp);
-    if (!result.ok) {
-      return res.status(result.status).json({ message: result.message });
-    }
-
-    const tokens = await issueTokens(user);
-    res.json({ success: true, user: sanitizeUser(user), tokens });
-  } catch (error) {
-    res.status(500).json({ message: 'Login verification failed' });
+    console.error('Login failed:', error.message);
+    res.status(500).json({ message: 'Login failed' });
   }
 };
 
@@ -142,6 +95,7 @@ const refresh = async (req, res) => {
     const tokens = await issueTokens(user);
     res.json({ success: true, tokens });
   } catch (error) {
+    console.error('Token refresh failed:', error.message);
     res.status(500).json({ message: 'Token refresh failed' });
   }
 };
@@ -151,14 +105,14 @@ const logout = async (req, res) => {
     await revokeUserTokens(req.user.id);
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
+    console.error('Logout failed:', error.message);
     res.status(500).json({ message: 'Logout failed' });
   }
 };
 
 module.exports = {
-  sendOtp: sendOtpHandler,
-  verifySignup,
-  verifyLogin,
+  signup,
+  login,
   refresh,
   logout
 };

@@ -1,10 +1,29 @@
 # Address API Documentation
 
 ## Authentication
-All endpoints require JWT token in header:
+All authenticated endpoints require a bearer access token in the header:
 ```
 Authorization: Bearer <JWT_TOKEN>
 ```
+
+### Signup (users)
+- `POST /api/v1/auth/signup`
+- Body: `{ "name": "...", "email": "...", "password": "...", "confirmPassword": "..." }`
+- The API hashes the password, ensures the email is unique, and returns access/refresh tokens on success.
+
+### Login (users)
+- `POST /api/v1/auth/login`
+- Body: `{ "email": "...", "password": "..." }`
+- On success you receive fresh access/refresh tokens containing the user payload.
+
+### Token management
+- `POST /api/v1/auth/refresh`: send `{ "refreshToken": "..." }` to rotate the refresh token.
+- `POST /api/v1/auth/logout`: revokes all user refresh tokens (requires `Authorization` header).
+
+### Admin login
+- `POST /api/v1/admin/auth/login`
+- Body: `{ "email": "<ADMIN_EMAIL>", "password": "<ADMIN_PASSWORD>" }`
+- The login succeeds only if the request matches the credentials defined in `ADMIN_EMAIL`/`ADMIN_PASSWORD`. A corresponding admin user is created on first successful login and receives tokens just like a regular user.
 
 ## Endpoints
 

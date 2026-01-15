@@ -1,7 +1,7 @@
 {
   "name": "ecommerce-address-api",
   "version": "1.0.0",
-  "description": "Optimized Address API for E-commerce with OTP authentication",
+  "description": "Optimized Address API for e-commerce with email/password authentication",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -26,7 +26,6 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.21.0",
     "morgan": "^1.10.1",
-    "twilio": "^5.11.2",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

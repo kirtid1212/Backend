@@ -17,7 +17,7 @@ const signAccessToken = (user) => {
   if (!secret) throw new Error('JWT_SECRET is not set');
 
   return jwt.sign(
-    { sub: user._id.toString(), role: user.role, phone: user.phone },
+    { sub: user._id.toString(), role: user.role, email: user.email || '' },
     secret,
     { expiresIn: accessTtl }
   );
