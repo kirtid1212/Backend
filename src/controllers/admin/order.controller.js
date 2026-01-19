@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../../models/Order');
 const Shipment = require('../../models/Shipment');
 const User = require('../../models/User');
+const { createNotification } = require('./notification.controller');
 
 const listOrders = async (req, res) => {
   try {
@@ -84,20 +85,66 @@ const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
-    const order = await Order.findById(req.params.orderId);
+    const order = await Order.findById(req.params.orderId).populate('user_id', 'name email');
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
+    const previousStatus = order.status;
     order.status = status;
     order.status_history.push({ status, at: new Date() });
+
+    // Update payment status if order is processing or delivered
+    if (status === 'processing' && order.payment_status === 'pending') {
+      order.payment_status = 'paid';
+    }
+
     await order.save();
+
+    // Trigger notifications based on status change
+    try {
+      // PAYMENT_SUCCESS notification
+      if (status === 'processing' && previousStatus === 'pending') {
+        await createNotification({
+          title: '💳 Payment Successful',
+          message: `Payment of ₹${order.total} received for order ${order.order_number}`,
+          type: 'PAYMENT_SUCCESS',
+          orderId: order._id,
+          userId: order.user_id._id,
+          metadata: {
+            orderNumber: order.order_number,
+            amount: order.total,
+            userName: order.user_id.name || 'Customer'
+          }
+        });
+      }
+
+      // DELIVERY_SUCCESS notification
+      if (status === 'delivered') {
+        await createNotification({
+          title: '📦 Order Delivered',
+          message: `Order ${order.order_number} has been delivered successfully`,
+          type: 'DELIVERY_SUCCESS',
+          orderId: order._id,
+          userId: order.user_id._id,
+          metadata: {
+            orderNumber: order.order_number,
+            amount: order.total,
+            userName: order.user_id.name || 'Customer'
+          }
+        });
+      }
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+      // Don't fail the status update if notification fails
+    }
 
     res.json({ success: true, data: order });
   } catch (error) {
     res.status(500).json({ message: 'Failed to update order status' });
   }
 };
+
 
 const updateShipment = async (req, res) => {
   try {

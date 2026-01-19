@@ -5,6 +5,7 @@ const Address = require('../models/Address');
 const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const Shipment = require('../models/Shipment');
+const { createNotification } = require('./admin/notification.controller');
 
 const buildOrderNumber = () => {
   return `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -127,7 +128,27 @@ const createOrder = async (req, res) => {
       await Cart.updateOne({ user_id: userId }, { items: [] });
     }
 
+    // Trigger ORDER_PLACED notification
+    try {
+      await createNotification({
+        title: '🛍️ New Order Placed',
+        message: `Order ${order.order_number} placed for ₹${order.total}`,
+        type: 'ORDER_PLACED',
+        orderId: order._id,
+        userId: userId,
+        metadata: {
+          orderNumber: order.order_number,
+          amount: order.total,
+          userName: req.user.name || 'Customer'
+        }
+      });
+    } catch (notifError) {
+      console.error('Failed to create notification:', notifError);
+      // Don't fail the order creation if notification fails
+    }
+
     res.status(201).json({ success: true, data: order });
+
   } catch (error) {
     if (error.message === 'Product not available' || error.message === 'Variant not available') {
       return res.status(400).json({ message: error.message });

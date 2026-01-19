@@ -5,6 +5,12 @@ const adminCategoryController = require('../../../controllers/admin/category.con
 const adminProductController = require('../../../controllers/admin/product.controller');
 const adminOrderController = require('../../../controllers/admin/order.controller');
 const meController = require('../../../controllers/me.controller');
+const notificationRoutes = require('./notification.routes');
+const analyticsRoutes = require('./analytics.routes');
+const customersRoutes = require('./customers.routes');
+const reviewsRoutes = require('./reviews.routes');
+const notificationsAdminRoutes = require('./notifications-admin.routes');
+const adminUsersRoutes = require('./admin-users.routes');
 
 const router = express.Router();
 
@@ -40,4 +46,15 @@ router.patch('/orders/:orderId/status', adminOrderController.updateOrderStatus);
 router.patch('/orders/:orderId/shipment', adminOrderController.updateShipment);
 router.post('/orders/:orderId/refund', adminOrderController.refundOrder);
 
+// New admin routes
+router.use('/analytics', analyticsRoutes);
+router.use('/customers', customersRoutes);
+router.use('/reviews', reviewsRoutes);
+router.use('/notifications-admin', notificationsAdminRoutes);
+router.use('/admin-users', adminUsersRoutes);
+
+// Legacy notification routes
+router.use('/notifications', notificationRoutes);
+
 module.exports = router;
+
