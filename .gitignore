@@ -2,6 +2,4 @@ node_modules
 .env
 .md
 flutter_admin
-pushNotification.service.js
-notiBackend/src/routes/v1/admin/notifications-admin.routes.js
-Backend/src/controllers/admin/notification.controller.js
+Backend/src/config/firebase_service_account.json
