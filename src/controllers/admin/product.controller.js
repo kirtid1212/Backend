@@ -3,6 +3,7 @@ const Variant = require('../../models/Variant');
 const ProductImage = require('../../models/ProductImage');
 const slugify = require('../../utils/slug');
 const { toBoolean } = require('../../utils/parse');
+const { uploadProductImage } = require('../../services/cloudinary');
 
 const refreshProductOptions = async (productId) => {
   const variants = await Variant.find({ product_id: productId, is_active: true });
@@ -249,16 +250,44 @@ const addProductImages = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const list = Array.isArray(urls) ? urls : url ? [url] : [];
-    if (!list.length) {
+    const manualUrls = Array.isArray(urls) ? urls : url ? [url] : [];
+    const uploadedUrls = [];
+
+    if (req.files) {
+      const fileEntries = Object.values(req.files);
+      const files = fileEntries.reduce((acc, entry) => {
+        if (Array.isArray(entry)) {
+          acc.push(...entry);
+        } else if (entry) {
+          acc.push(entry);
+        }
+        return acc;
+      }, []);
+
+      for (const file of files) {
+        if (!file || !file.data) {
+          continue;
+        }
+
+        const uploadResult = await uploadProductImage(file.data, {
+          folder: `ecommerce/products/${productId}`
+        });
+
+        uploadedUrls.push(uploadResult.secure_url || uploadResult.url);
+      }
+    }
+
+    const combinedUrls = [...uploadedUrls, ...manualUrls];
+    if (!combinedUrls.length) {
       return res.status(400).json({ message: 'Image url is required' });
     }
 
+    const existingCount = await ProductImage.countDocuments({ product_id: productId });
     const images = await ProductImage.insertMany(
-      list.map((item, index) => ({
+      combinedUrls.map((item, index) => ({
         product_id: productId,
         url: item,
-        sort_order: index,
+        sort_order: existingCount + index,
         is_primary: Boolean(isPrimary) && index === 0
       }))
     );
