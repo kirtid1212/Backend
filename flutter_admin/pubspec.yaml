@@ -1,0 +1,47 @@
+name: admin_dashboard
+description: E-commerce Women Ethnic Wear Admin Dashboard with Notifications
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # Firebase
+  firebase_core: ^2.24.2
+  firebase_messaging: ^14.7.9
+  
+  # Local Notifications (for foreground)
+  flutter_local_notifications: ^16.3.0
+  
+  # HTTP Client
+  dio: ^5.4.0
+  
+  # Storage
+  shared_preferences: ^2.2.2
+  
+  # UI
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  
+  # Utilities
+  intl: ^0.18.1
+  logger: ^2.0.2+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
