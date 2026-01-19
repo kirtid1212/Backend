@@ -1,19 +1,2 @@
 node_modules
 .env
-.md
-src/config/firebase.config.js
-flutter_admin
-
-# Notification related files
-flutter_admin/lib/features/notifications/
-flutter_admin/lib/core/services/fcm_service.dart
-public/firebase-messaging-sw.js
-src/controllers/admin/notification.controller.js
-src/controllers/admin/notifications.controller.js
-src/models/Notification.js
-src/routes/v1/admin/notification.routes.js
-src/routes/v1/admin/notifications-admin.routes.js
-src/utils/pushNotification.service.js
-NOTIFICATION_SETUP_GUIDE.md
-notification_system_postman.json
-NOTIFICATION_SYSTEM_README.md
