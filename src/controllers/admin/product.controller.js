@@ -292,6 +292,11 @@ const addProductImages = async (req, res) => {
       }))
     );
 
+    // Sync images to Product model for easier querying
+    const allProductImages = await ProductImage.find({ product_id: productId }).sort({ sort_order: 1 });
+    const imageUrls = allProductImages.map(img => img.url);
+    await Product.findByIdAndUpdate(productId, { images: imageUrls });
+
     res.status(201).json({ success: true, data: images });
   } catch (error) {
     res.status(500).json({ message: 'Failed to add product images' });
@@ -308,6 +313,11 @@ const deleteProductImage = async (req, res) => {
     if (!image) {
       return res.status(404).json({ message: 'Image not found' });
     }
+
+    // Sync images to Product model after deletion
+    const allProductImages = await ProductImage.find({ product_id: req.params.productId }).sort({ sort_order: 1 });
+    const imageUrls = allProductImages.map(img => img.url);
+    await Product.findByIdAndUpdate(req.params.productId, { images: imageUrls });
 
     res.json({ success: true, message: 'Image deleted' });
   } catch (error) {

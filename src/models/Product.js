@@ -14,7 +14,8 @@ const productSchema = new mongoose.Schema(
     tags: [{ type: String }],
     available_sizes: [{ type: String }],
     available_colors: [{ type: String }],
-    sold_count: { type: Number, default: 0 }
+    sold_count: { type: Number, default: 0 },
+    images: [{ type: String }] // Store image URLs directly on product for easier querying
   },
   { timestamps: true }
 );

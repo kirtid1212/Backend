@@ -6,13 +6,13 @@ const createCategory = async (req, res) => {
   try {
     const { name, description, parentId, imageUrl, sortOrder } = req.body;
     if (!name) {
-      return res.status(400).json({ message: 'Name is required' });
+      return res.status(400).json({ success: false, error: 'Name is required' });
     }
 
     const slug = slugify(name);
     const exists = await Category.findOne({ slug });
     if (exists) {
-      return res.status(409).json({ message: 'Category slug already exists' });
+      return res.status(409).json({ success: false, error: 'Category slug already exists' });
     }
 
     const category = await Category.create({
@@ -26,7 +26,8 @@ const createCategory = async (req, res) => {
 
     res.status(201).json({ success: true, data: category });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to create category' });
+    console.error('Error creating category:', error);
+    res.status(500).json({ success: false, error: 'Failed to create category' });
   }
 };
 
@@ -35,14 +36,14 @@ const updateCategory = async (req, res) => {
     const { name, description, parentId, imageUrl, sortOrder, isActive } = req.body;
     const category = await Category.findById(req.params.categoryId);
     if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
+      return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
     if (name) {
       const slug = slugify(name);
       const exists = await Category.findOne({ slug, _id: { $ne: category._id } });
       if (exists) {
-        return res.status(409).json({ message: 'Category slug already exists' });
+        return res.status(409).json({ success: false, error: 'Category slug already exists' });
       }
       category.name = name;
       category.slug = slug;
@@ -57,7 +58,8 @@ const updateCategory = async (req, res) => {
     await category.save();
     res.json({ success: true, data: category });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update category' });
+    console.error('Error updating category:', error);
+    res.status(500).json({ success: false, error: 'Failed to update category' });
   }
 };
 
@@ -65,14 +67,15 @@ const deleteCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.categoryId);
     if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
+      return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
     category.is_active = false;
     await category.save();
     res.json({ success: true, message: 'Category deleted' });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete category' });
+    console.error('Error deleting category:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete category' });
   }
 };
 
@@ -80,7 +83,7 @@ const setCategoryImage = async (req, res) => {
   try {
     const { imageUrl } = req.body;
     if (!imageUrl) {
-      return res.status(400).json({ message: 'imageUrl is required' });
+      return res.status(400).json({ success: false, error: 'imageUrl is required' });
     }
 
     const category = await Category.findByIdAndUpdate(
@@ -90,12 +93,27 @@ const setCategoryImage = async (req, res) => {
     );
 
     if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
+      return res.status(404).json({ success: false, error: 'Category not found' });
     }
 
     res.json({ success: true, data: category });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update category image' });
+    console.error('Error setting category image:', error);
+    res.status(500).json({ success: false, error: 'Failed to update category image' });
+  }
+};
+
+// Get all categories (for admin dashboard)
+const listCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({ is_active: true })
+      .sort({ sort_order: 1, name: 1 })
+      .lean();
+
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    console.error('Error listing categories:', error);
+    res.status(500).json({ success: false, error: 'Failed to list categories' });
   }
 };
 
@@ -103,5 +121,6 @@ module.exports = {
   createCategory,
   updateCategory,
   deleteCategory,
-  setCategoryImage
+  setCategoryImage,
+  listCategories
 };

@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const ProductImage = require('../models/ProductImage');
 
 class ProductController {
   static async getAllProducts(req, res) {
@@ -35,9 +36,19 @@ class ProductController {
         return res.status(404).json({ error: 'Product not found' });
       }
       
+      // If images not in product, fetch from ProductImage collection
+      let imageUrls = product.images || [];
+      if (!imageUrls.length) {
+        const images = await ProductImage.find({ product_id: req.params.id }).sort({ sort_order: 1 });
+        imageUrls = images.map(img => img.url);
+      }
+      
+      const productObj = product.toObject();
+      productObj.images = imageUrls;
+      
       res.json({
         success: true,
-        data: product
+        data: productObj
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch product' });
@@ -135,3 +146,4 @@ class ProductController {
 }
 
 module.exports = ProductController;
+
