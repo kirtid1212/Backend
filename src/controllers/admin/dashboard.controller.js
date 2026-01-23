@@ -2,7 +2,6 @@ const Order = require('../../models/Order');
 const Product = require('../../models/Product');
 const User = require('../../models/User');
 const Category = require('../../models/Category');
-t
 // Get dashboard statistics
 exports.getStats = async (req, res) => {
   try {
@@ -254,7 +253,7 @@ exports.getRecentOrders = async (req, res) => {
     const recentOrders = await Order.find()
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
-      .populate('userId', 'name email');
+      .populate('user_id', 'name email');
 
     res.json({ success: true, data: recentOrders });
   } catch (error) {

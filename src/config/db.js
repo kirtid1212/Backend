@@ -1,13 +1,5 @@
-const mongoose = require("mongoose");
-
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log(" MongoDB connected");
-  } catch (err) {
-    console.error(" MongoDB error:", err.message);
-    process.exit(1);
-  }
-};
+// This file is deprecated. MongoDB connection is now handled by src/utils/database.js
+// Please update imports to use: require('./src/utils/database')
+const connectDB = require('../utils/database');
 
 module.exports = connectDB;

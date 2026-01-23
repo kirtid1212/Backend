@@ -28,7 +28,7 @@ exports.getAllNotifications = async (req, res) => {
         .limit(limit)
         .sort({ createdAt: -1 })
         .populate('userId', 'name email')
-        .populate('orderId', 'orderNumber'),
+      .populate('orderId', 'order_number'),
       Notification.countDocuments(query)
     ]);
 

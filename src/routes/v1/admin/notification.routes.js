@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../../../controllers/admin/notification.controller');
-const { authenticateAdmin } = require('../../../middleware/auth.middleware');
+const { authenticate, requireAdmin } = require('../../../middleware/auth.middleware');
 
 // All routes require admin authentication
-router.use(authenticateAdmin);
+router.use(authenticate, requireAdmin);
 
 // Token management
 router.post('/register-token', notificationController.registerAdminToken);
