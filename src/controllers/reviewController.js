@@ -7,13 +7,13 @@ class ReviewController {
       const productId = req.params.productId;
       const { page = 1, limit = 10 } = req.query;
 
-      const reviews = await Review.find({ product_id: productId })
-        .populate('product_id', 'name')
+      const reviews = await Review.find({ productId: productId })
+        .populate('productId', 'name')
         .limit(limit * 1)
         .skip((page - 1) * limit)
         .sort({ createdAt: -1 });
 
-      const total = await Review.countDocuments({ product_id: productId });
+      const total = await Review.countDocuments({ productId: productId });
 
       res.json({
         success: true,
@@ -32,27 +32,27 @@ class ReviewController {
   static async createReview(req, res) {
     try {
       const userId = req.user.id;
-      const { product_id, rating, comment } = req.body;
+      const { productId, rating, comment } = req.body;
 
-      if (!product_id || !rating || !comment) {
+      if (!productId || !rating || !comment) {
         return res.status(400).json({ error: 'Product ID, rating, and comment are required' });
       }
 
       // Check if review already exists
-      const existingReview = await Review.findOne({ user_id: userId, product_id });
+      const existingReview = await Review.findOne({ userId: userId, productId: productId });
       if (existingReview) {
         return res.status(400).json({ error: 'Review already exists for this product' });
       }
 
       const review = new Review({
-        user_id: userId,
-        product_id,
+        userId: userId,
+        productId: productId,
         rating,
         comment
       });
 
       await review.save();
-      await review.populate('product_id', 'name');
+      await review.populate('productId', 'name');
 
       res.status(201).json({
         success: true,
@@ -71,7 +71,7 @@ class ReviewController {
       const reviewId = req.params.id;
       const { rating, comment } = req.body;
 
-      const review = await Review.findOne({ _id: reviewId, user_id: userId });
+      const review = await Review.findOne({ _id: reviewId, userId: userId });
       if (!review) {
         return res.status(404).json({ error: 'Review not found' });
       }
@@ -80,7 +80,7 @@ class ReviewController {
       if (comment) review.comment = comment;
 
       await review.save();
-      await review.populate('product_id', 'name');
+      await review.populate('productId', 'name');
 
       res.json({
         success: true,
@@ -97,7 +97,7 @@ class ReviewController {
       const userId = req.user.id;
       const reviewId = req.params.id;
 
-      const review = await Review.findOneAndDelete({ _id: reviewId, user_id: userId });
+      const review = await Review.findOneAndDelete({ _id: reviewId, userId: userId });
       if (!review) {
         return res.status(404).json({ error: 'Review not found' });
       }
@@ -113,3 +113,4 @@ class ReviewController {
 }
 
 module.exports = ReviewController;
+

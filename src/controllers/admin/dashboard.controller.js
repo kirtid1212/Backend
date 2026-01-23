@@ -71,16 +71,25 @@ exports.getStats = async (req, res) => {
 exports.getChartData = async (req, res) => {
   try {
     const { period = '7d' } = req.query;
-    const days = parseInt(period) || 7;
+    
+    // Extract numeric value from period (e.g., '7d' -> 7, '30d' -> 30)
+    const days = parseInt(period.replace('d', '')) || 7;
+    
+    console.log(`[Dashboard Chart] Fetching chart data for period: ${period}, days: ${days}`);
     
     const data = [];
+    const today = new Date();
+    today.setHours(23, 59, 59, 999); // End of today
+    
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      date.setHours(0, 0, 0, 0);
+      date.setHours(0, 0, 0, 0); // Start of day
       
       const nextDate = new Date(date);
-      nextDate.setDate(nextDate.getDate() + 1);
+      nextDate.setDate(nextDate.getDate() + 1); // Start of next day
+
+      console.log(`[Dashboard Chart] Fetching data for date: ${date.toISOString()}`);
 
       const orders = await Order.countDocuments({
         createdAt: { $gte: date, $lt: nextDate }
@@ -96,15 +105,21 @@ exports.getChartData = async (req, res) => {
         { $group: { _id: null, total: { $sum: '$total' } } }
       ]);
 
+      const revenueAmount = revenue[0]?.total || 0;
+      
+      console.log(`[Dashboard Chart] Date: ${date.toISOString().split('T')[0]}, Orders: ${orders}, Revenue: ${revenueAmount}`);
+
       data.push({
         date: date.toISOString().split('T')[0],
         orders,
-        revenue: revenue[0]?.total || 0
+        revenue: revenueAmount
       });
     }
 
+    console.log(`[Dashboard Chart] Returning ${data.length} chart data points`);
     res.json({ success: true, data });
   } catch (error) {
+    console.error('[Dashboard Chart] Error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };

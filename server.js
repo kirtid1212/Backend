@@ -11,7 +11,44 @@ const PORT = process.env.PORT || 3000;
 
 connectDB();
 
-app.use(cors());
+// Configure CORS with proper options for file uploads and preflight requests
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    // In production, replace with your actual frontend domain(s)
+    const allowedOrigins = [
+      'http://localhost:62896',
+      'http://localhost:3000',
+      'http://127.0.0.1:62896',
+      'http://127.0.0.1:3000'
+    ];
+    
+    // Allow any localhost port for development
+    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.match(/^http:\/\/localhost:\d+$/)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Content-Length',
+    'Accept',
+    'Authorization',
+    'Origin',
+    'Cache-Control',
+    'X-Requested-With',
+    'X-File-Name'
+  ],
+  exposedHeaders: ['Content-Disposition', 'Content-Length'],
+  credentials: true,
+  optionsSuccessStatus: 204, // Some legacy browsers choke on 200
+  preflightContinue: false, // Don't pass preflight requests to next middleware
+  maxAge: 86400 // Cache preflight response for 24 hours
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(

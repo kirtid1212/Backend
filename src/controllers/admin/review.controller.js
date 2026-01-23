@@ -22,7 +22,7 @@ exports.listReviews = async (req, res) => {
 
     const reviews = await Review.find(filter)
       .populate('userId', 'name email')
-      .populate('productId', 'name')
+      .populate('productId', 'name image')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
