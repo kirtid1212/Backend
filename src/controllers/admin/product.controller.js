@@ -243,14 +243,21 @@ const updateVariantStock = async (req, res) => {
 const addProductImages = async (req, res) => {
   try {
     const { urls, url, isPrimary } = req.body;
-    const productId = req.params.productId;
+    const productId = req.params.id;
 
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    const manualUrls = Array.isArray(urls) ? urls : url ? [url] : [];
+    const manualUrls = Array.isArray(urls)
+      ? urls
+      : Array.isArray(imageUrls)
+      ? imageUrls
+      : url
+      ? [url]
+      : [];
+
     const uploadedUrls = [];
 
     if (req.files) {

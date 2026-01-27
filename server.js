@@ -4,12 +4,16 @@ const cors = require('cors');
 const morgan = require('morgan');
 const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
+const { initializeFirebase } = require('./src/services/notification.service');
 const v1Routes = require('./src/routes/v1');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 connectDB();
+
+// Initialize Firebase for notifications
+initializeFirebase();
 
 // Configure CORS with proper options for file uploads and preflight requests
 const corsOptions = {
