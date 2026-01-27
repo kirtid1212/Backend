@@ -5,7 +5,7 @@ const {
   sendCustomNotification,
   registerDeviceToken,
   unregisterDeviceToken,
-  getUserDevices,
+  getUserDevices: getUserDevicesFromService,
   getNotificationStats
 } = require('../services/notification.service');
 const DeviceToken = require('../models/deviceToken.model');
@@ -68,7 +68,7 @@ const unregisterDevice = async (req, res) => {
 const getUserDevices = async (req, res) => {
   try {
     const userId = req.user._id;
-    const result = await getUserDevices(userId);
+    const result = await getUserDevicesFromService(userId);
 
     if (!result.success) {
       return res.status(500).json({ error: result.error });
@@ -194,7 +194,6 @@ const sendBroadcast = async (req, res) => {
     }
 
     // Get all active user devices
-    const DeviceToken = require('../models/deviceToken.model');
     const devices = await DeviceToken.find({ isActive: true }, 'fcmToken userId');
 
     if (!devices.length) {
