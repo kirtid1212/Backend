@@ -8,9 +8,13 @@ const {
   getUserDevices,
   getNotificationStats
 } = require('../services/notification.service');
+const DeviceToken = require('../models/deviceToken.model');
 
-// Register/Update device token
-exports.registerDevice = async (req, res) => {
+/**
+ * Register/Update device token
+ * POST /api/v1/notifications/register-device
+ */
+const registerDevice = async (req, res) => {
   try {
     const { fcmToken, deviceName, deviceType } = req.body;
     const userId = req.user._id;
@@ -32,8 +36,11 @@ exports.registerDevice = async (req, res) => {
   }
 };
 
-// Unregister device token
-exports.unregisterDevice = async (req, res) => {
+/**
+ * Unregister device token
+ * POST /api/v1/notifications/unregister-device
+ */
+const unregisterDevice = async (req, res) => {
   try {
     const { fcmToken } = req.body;
 
@@ -54,8 +61,11 @@ exports.unregisterDevice = async (req, res) => {
   }
 };
 
-// Get user's devices
-exports.getUserDevices = async (req, res) => {
+/**
+ * Get user's registered devices
+ * GET /api/v1/notifications/devices
+ */
+const getUserDevices = async (req, res) => {
   try {
     const userId = req.user._id;
     const result = await getUserDevices(userId);
@@ -71,8 +81,11 @@ exports.getUserDevices = async (req, res) => {
   }
 };
 
-// Send test notification to user
-exports.sendTestNotification = async (req, res) => {
+/**
+ * Send test notification to authenticated user
+ * POST /api/v1/notifications/test
+ */
+const sendTestNotification = async (req, res) => {
   try {
     const userId = req.user._id;
     const { title = 'Test Notification', body = 'This is a test notification from the server' } = req.body;
@@ -93,8 +106,11 @@ exports.sendTestNotification = async (req, res) => {
   }
 };
 
-// Send notification to specific device (admin only)
-exports.sendToDevice = async (req, res) => {
+/**
+ * Send notification to specific device (admin only)
+ * POST /api/v1/notifications/send-to-device
+ */
+const sendToDevice = async (req, res) => {
   try {
     const { fcmToken, title, body, data } = req.body;
 
@@ -115,8 +131,11 @@ exports.sendToDevice = async (req, res) => {
   }
 };
 
-// Send notification to specific user (admin only)
-exports.sendToUser = async (req, res) => {
+/**
+ * Send notification to specific user (admin only)
+ * POST /api/v1/notifications/send-to-user
+ */
+const sendToUser = async (req, res) => {
   try {
     const { userId, title, body, data } = req.body;
 
@@ -137,8 +156,11 @@ exports.sendToUser = async (req, res) => {
   }
 };
 
-// Send notification to multiple users (admin only)
-exports.sendToUsers = async (req, res) => {
+/**
+ * Send notification to multiple users (admin only)
+ * POST /api/v1/notifications/send-to-users
+ */
+const sendToUsers = async (req, res) => {
   try {
     const { userIds, title, body, data } = req.body;
 
@@ -159,8 +181,11 @@ exports.sendToUsers = async (req, res) => {
   }
 };
 
-// Send broadcast notification (admin only)
-exports.sendBroadcast = async (req, res) => {
+/**
+ * Send broadcast notification to all users (admin only)
+ * POST /api/v1/notifications/broadcast
+ */
+const sendBroadcast = async (req, res) => {
   try {
     const { title, body, data } = req.body;
 
@@ -193,8 +218,11 @@ exports.sendBroadcast = async (req, res) => {
   }
 };
 
-// Get notification statistics (admin only)
-exports.getStats = async (req, res) => {
+/**
+ * Get notification statistics (admin only)
+ * GET /api/v1/notifications/stats
+ */
+const getStats = async (req, res) => {
   try {
     const result = await getNotificationStats();
 
@@ -207,4 +235,17 @@ exports.getStats = async (req, res) => {
     console.error('Error getting notification stats:', error);
     res.status(500).json({ error: 'Failed to get notification stats' });
   }
+};
+
+// Export all controller functions
+module.exports = {
+  registerDevice,
+  unregisterDevice,
+  getUserDevices,
+  sendTestNotification,
+  sendToDevice,
+  sendToUser,
+  sendToUsers,
+  sendBroadcast,
+  getStats
 };
