@@ -5,6 +5,7 @@ const Address = require('../models/Address');
 const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const Shipment = require('../models/Shipment');
+const { notifyAdmins } = require('../services/notification.service');
 
 const buildOrderNumber = () => {
   return `ORD-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -109,6 +110,22 @@ const createOrder = async (req, res) => {
       payment_status: 'pending',
       notes: notes || '',
       status_history: [{ status: 'pending', at: new Date() }]
+    });
+
+    // Send notification to admins about new order (non-blocking)
+    notifyAdmins(
+      '🛍️ New Order Received',
+      `Order #${order.order_number} - ${order.subtotal.toFixed(2)} - ${orderItems.length} items`,
+      {
+        orderId: order._id.toString(),
+        orderNumber: order.order_number,
+        userId: userId,
+        amount: order.total,
+        itemCount: orderItems.length
+      }
+    ).catch(error => {
+      console.error('Failed to send admin notification:', error);
+      // Don't fail order creation if notification fails
     });
 
     for (const item of orderItems) {

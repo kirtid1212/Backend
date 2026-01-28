@@ -8,11 +8,13 @@ const {
   getUserDevices: getUserDevicesFromService,
   getNotificationStats
 } = require('../services/notification.service');
+const { saveDeviceToken } = require('../utils/firestore');
 const DeviceToken = require('../models/deviceToken.model');
 
 /**
  * Register/Update device token
  * POST /api/v1/notifications/register-device
+ * Saves to both MongoDB (for compatibility) and Firestore
  */
 const registerDevice = async (req, res) => {
   try {
@@ -23,10 +25,20 @@ const registerDevice = async (req, res) => {
       return res.status(400).json({ error: 'FCM token is required' });
     }
 
+    // Save to MongoDB
     const result = await registerDeviceToken(userId, fcmToken, deviceName, deviceType);
 
     if (!result.success) {
       return res.status(400).json({ error: result.error });
+    }
+
+    // Also save to Firestore
+    const userRole = req.user.role || 'user';
+    const platform = deviceType || 'web';
+    const firestoreResult = await saveDeviceToken(userId.toString(), fcmToken, userRole, platform);
+
+    if (!firestoreResult.success) {
+      console.warn('Firestore save failed:', firestoreResult.error);
     }
 
     res.status(result.isNew ? 201 : 200).json(result);

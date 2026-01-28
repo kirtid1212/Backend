@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const DeviceToken = require('../models/deviceToken.model');
+const { getUserTokens, getAdminTokens, getAllTokens, markTokenInactive } = require('../utils/firestore');
 
 // Initialize Firebase Admin SDK (called from server.js)
 const initializeFirebase = () => {
@@ -60,19 +61,25 @@ const sendNotificationToDevice = async (fcmToken, title, body, data = {}) => {
 };
 
 // Send notification to user (all active devices)
+// Fetches tokens from both MongoDB and Firestore
 const sendNotificationToUser = async (userId, title, body, data = {}) => {
   try {
-    const deviceTokens = await DeviceToken.find({
-      userId,
-      isActive: true
-    });
+    // Get tokens from Firestore first, fallback to MongoDB
+    let tokens = await getUserTokens(userId.toString());
 
-    if (!deviceTokens.length) {
+    if (!tokens.length) {
+      // Fallback to MongoDB
+      const deviceTokens = await DeviceToken.find({
+        userId,
+        isActive: true
+      });
+      tokens = deviceTokens.map(dt => dt.fcmToken);
+    }
+
+    if (!tokens.length) {
       return { success: false, error: 'No active devices found for user' };
     }
 
-    const tokens = deviceTokens.map(dt => dt.fcmToken);
-    
     const message = {
       notification: {
         title,
@@ -103,12 +110,16 @@ const sendNotificationToUser = async (userId, title, body, data = {}) => {
         }
       });
 
-      // Mark failed tokens as inactive
+      // Mark failed tokens as inactive in both MongoDB and Firestore
       if (failedTokens.length > 0) {
         await DeviceToken.updateMany(
           { fcmToken: { $in: failedTokens } },
           { isActive: false }
         );
+        // Also mark in Firestore
+        for (const token of failedTokens) {
+          await markTokenInactive(token);
+        }
       }
     }
 
@@ -312,6 +323,73 @@ const getNotificationStats = async () => {
   }
 };
 
+/**
+ * Send notification to all admin devices (from order or other events)
+ * Fetches admin tokens from Firestore and sends notifications
+ * @param {string} title - Notification title
+ * @param {string} body - Notification body
+ * @param {object} data - Additional data (orderId, userId, etc.)
+ * @returns {Promise<object>} - Success/failure result
+ */
+const notifyAdmins = async (title, body, data = {}) => {
+  try {
+    // Get all active admin tokens from Firestore
+    const tokens = await getAdminTokens();
+
+    if (!tokens.length) {
+      console.warn('No active admin tokens found for notification');
+      return { success: false, error: 'No active admin devices' };
+    }
+
+    const message = {
+      notification: {
+        title,
+        body
+      },
+      data: {
+        ...data,
+        timestamp: new Date().toISOString(),
+        type: 'admin_alert'
+      }
+    };
+
+    // Send to all admin tokens
+    const response = await admin.messaging().sendMulticast({
+      ...message,
+      tokens
+    });
+
+    console.log(`✅ Admin notification sent: ${response.successCount}/${tokens.length} devices`);
+
+    // Mark failed tokens as inactive in Firestore
+    if (response.failureCount > 0) {
+      const failedTokens = [];
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          failedTokens.push(tokens[idx]);
+        }
+      });
+
+      if (failedTokens.length > 0) {
+        for (const token of failedTokens) {
+          await markTokenInactive(token);
+        }
+        console.warn(`⚠️ Marked ${failedTokens.length} admin tokens as inactive`);
+      }
+    }
+
+    return {
+      success: true,
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+      message: `Notification sent to ${response.successCount} admin devices`
+    };
+  } catch (error) {
+    console.error('Error sending admin notification:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
   initializeFirebase,
   sendNotificationToDevice,
@@ -321,5 +399,6 @@ module.exports = {
   registerDeviceToken,
   unregisterDeviceToken,
   getUserDevices,
-  getNotificationStats
+  getNotificationStats,
+  notifyAdmins
 };
