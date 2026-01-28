@@ -6,6 +6,4 @@ const router = express.Router();
 
 router.get('/me', authenticate, meController.getProfile);
 
-router.patch('/me', authenticate, meController.updateProfile);
-
 module.exports = router;
