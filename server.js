@@ -3,12 +3,13 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
-const paypalService = require('./paypalService');
 const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
 require('./src/firebaseAdmin');
 
 const v1Routes = require('./src/routes/v1');
+const paypalRoutes = require('./src/routes/paypal.routes');
+const paypalWebhook = require('./src/webhooks/paypal.webhook');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -29,10 +30,7 @@ const corsOptions = {
     ];
 
     // Allow any localhost port for development
-    app.use(cors({
-      origin: true,
-      credentials: true
-    }));
+   if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.match(/^http:\/\/localhost:\d+$/)) { callback(null, true); } else { callback(new Error('Not allowed by CORS')); }
 
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -69,62 +67,19 @@ app.use(morgan('dev'));
 // JSON for normal routes
 app.use(express.json({ limit: '1mb' }));
 
-// RAW body ONLY for PayPal webhook
-app.post('/api/paypal/webhook',
-  express.raw({ type: 'application/json' }),
-  require('./src/webhooks/paypal.webhook')
-);
-
-
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
 app.use('/api/v1', v1Routes);
+app.use('/api/paypal', paypalRoutes);
 
-// ================= PAYPAL ROUTES =================
-
-// Create PayPal Order
-app.post('/api/paypal/create-order', async (req, res) => {
-  try {
-    const { total } = req.body;
-
-    if (!total) {
-      return res.status(400).json({ error: 'Total amount is required' });
-    }
-
-    const order = await paypalService.createOrder(total);
-    res.status(200).json(order);
-
-  } catch (error) {
-    console.error('Create Order Error:', error);
-    res.status(500).json({
-      error: 'Failed to create PayPal order',
-      details: error.message,
-    });
-  }
-});
-
-// Capture PayPal Order
-app.post('/api/paypal/capture-order', async (req, res) => {
-  try {
-    const { orderID } = req.body;
-
-    if (!orderID) {
-      return res.status(400).json({ error: 'orderID is required' });
-    }
-
-    const captureData = await paypalService.captureOrder(orderID);
-    res.status(200).json(captureData);
-
-  } catch (error) {
-    console.error('Capture Order Error:', error);
-    res.status(500).json({
-      error: 'Failed to capture PayPal order',
-      details: error.message,
-    });
-  }
-});
+// PayPal webhook (RAW body)
+app.post(
+  '/api/paypal/webhook',
+  express.raw({ type: 'application/json' }),
+  paypalWebhook
+);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
@@ -139,6 +94,11 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Ecommerce API server running on port ${PORT}`);
+  console.log(`Health check: https://backend-ta8c.onrender.com/health`);
+});
+
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Ecommerce API server running on port ${PORT}`);
   console.log(`Health check: https://backend-ta8c.onrender.com/health`);
 });
 
