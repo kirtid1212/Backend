@@ -6,7 +6,7 @@ const path = require('path');
 const paypalService = require('./paypalService');
 const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
-require('./src/firebaseAdmin'); 
+require('./src/firebaseAdmin');
 
 const v1Routes = require('./src/routes/v1');
 
@@ -26,7 +26,7 @@ const corsOptions = {
       'http://127.0.0.1:62896',
       'http://127.0.0.1:3000'
     ];
-    
+
     // Allow any localhost port for development
     if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.match(/^http:\/\/localhost:\d+$/)) {
       callback(null, true);
@@ -71,14 +71,6 @@ app.get('/health', (req, res) => {
 
 app.use('/api/v1', v1Routes);
 
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
-app.use((err, req, res, next) => {
-  console.error(err.stack || err);
-  res.status(500).json({ error: 'Internal server error' });
-});
 // ================= PAYPAL ROUTES =================
 
 // Create PayPal Order
@@ -122,6 +114,16 @@ app.post('/api/paypal/capture-order', async (req, res) => {
     });
   }
 });
+
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err.stack || err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
 
 
 app.listen(PORT, () => {

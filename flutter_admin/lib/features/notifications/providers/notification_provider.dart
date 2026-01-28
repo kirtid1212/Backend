@@ -4,7 +4,7 @@ import '../data/repositories/notification_repository.dart';
 
 // Base URL provider - Replace with your actual backend URL
 final baseUrlProvider = Provider<String>((ref) {
-  return 'http://localhost:3000'; // TODO: Replace with your backend URL
+  return 'https://backend-ta8c.onrender.com';
 });
 
 // Notification Repository Provider
