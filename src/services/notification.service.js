@@ -1,31 +1,6 @@
-const admin = require('firebase-admin');
+const admin = require('../firebaseAdmin');
 const DeviceToken = require('../models/deviceToken.model');
 const { getUserTokens, getAdminTokens, getAllTokens, markTokenInactive } = require('../utils/firestore');
-
-// Initialize Firebase Admin SDK (called from server.js)
-const initializeFirebase = () => {
-  if (!admin.apps.length) {
-    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_PATH;
-    
-    if (!serviceAccountPath) {
-      console.error('FIREBASE_SERVICE_ACCOUNT_KEY_PATH not set in environment');
-      return false;
-    }
-
-    try {
-      const serviceAccount = require(serviceAccountPath);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      console.log('Firebase Admin SDK initialized');
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize Firebase:', error.message);
-      return false;
-    }
-  }
-  return true;
-};
 
 // Send notification to single device
 const sendNotificationToDevice = async (fcmToken, title, body, data = {}) => {
@@ -391,7 +366,6 @@ const notifyAdmins = async (title, body, data = {}) => {
 };
 
 module.exports = {
-  initializeFirebase,
   sendNotificationToDevice,
   sendNotificationToUser,
   sendNotificationToUsers,
