@@ -2,9 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const path = require('path');
+const paypalService = require('./paypalService');
 const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
 require('./src/firebaseAdmin'); // Initialize Firebase Admin SDK
+dotenv.config({ path: path.join(__dirname, '.env') });
+
 const v1Routes = require('./src/routes/v1');
 
 const app = express();
@@ -76,6 +80,50 @@ app.use((err, req, res, next) => {
   console.error(err.stack || err);
   res.status(500).json({ error: 'Internal server error' });
 });
+// ================= PAYPAL ROUTES =================
+
+// Create PayPal Order
+app.post('/api/paypal/create-order', async (req, res) => {
+  try {
+    const { total } = req.body;
+
+    if (!total) {
+      return res.status(400).json({ error: 'Total amount is required' });
+    }
+
+    const order = await paypalService.createOrder(total);
+    res.status(200).json(order);
+
+  } catch (error) {
+    console.error('Create Order Error:', error);
+    res.status(500).json({
+      error: 'Failed to create PayPal order',
+      details: error.message,
+    });
+  }
+});
+
+// Capture PayPal Order
+app.post('/api/paypal/capture-order', async (req, res) => {
+  try {
+    const { orderID } = req.body;
+
+    if (!orderID) {
+      return res.status(400).json({ error: 'orderID is required' });
+    }
+
+    const captureData = await paypalService.captureOrder(orderID);
+    res.status(200).json(captureData);
+
+  } catch (error) {
+    console.error('Capture Order Error:', error);
+    res.status(500).json({
+      error: 'Failed to capture PayPal order',
+      details: error.message,
+    });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Ecommerce API server running on port ${PORT}`);
