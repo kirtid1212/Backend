@@ -4,7 +4,16 @@ const Transaction = require("../models/transaction.model");
 
 // CREATE ORDER
 exports.createOrder = async (req, res) => {
-  const token = await getAccessToken();
+try{
+    const token = await getAccessToken();
+
+  const amount = req.body.amount;
+
+  if (!amount) {
+    return res.status(400).json({ error: 'Amount is required' });
+  }
+
+  const formattedAmount = Number(amount).toFixed(2);
 
   const response = await axios.post(
     `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders`,
@@ -14,22 +23,33 @@ exports.createOrder = async (req, res) => {
         {
           amount: {
             currency_code: "USD",
-            value: req.body.amount,
+            value: formattedAmount,
           },
         },
       ],
     },
     {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     }
   );
 
   res.json(response.data);
+  }catch (error) {
+      console.error(
+        "PayPal Create Order Error:",
+        error.response?.data || error
+      );
+
+      res.status(500).json({
+        error: "Failed to create PayPal order",
+      });
+    }
 };
 
 // CAPTURE PAYMENT
 exports.captureOrder = async (req, res) => {
-  const token = await getAccessToken();
+ try{
+   const token = await getAccessToken();
 
   const response = await axios.post(
     `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders/${req.params.orderId}/capture`,
@@ -51,4 +71,14 @@ exports.captureOrder = async (req, res) => {
   });
 
   res.json(response.data);
+ }catch (error) {
+    console.error(
+      "PayPal Capture Error:",
+      error.response?.data || error
+    );
+
+    res.status(500).json({
+      error: "Failed to capture PayPal order",
+    });
+  }
 };
