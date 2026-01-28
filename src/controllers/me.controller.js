@@ -1,9 +1,25 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
-
+/**
+ * GET /api/v1/me
+ * Get logged-in user's profile
+ */
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select(
+    // Safe userId extraction
+    const userId = req.user && req.user.id;
+
+    // Validate userId before DB call
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized'
+      });
+    }
+
+    // Safe DB query (prevents CastError)
+    const user = await User.findOne({ _id: userId }).select(
       'name email phone role'
     );
 
@@ -14,6 +30,7 @@ const getProfile = async (req, res) => {
       });
     }
 
+    // Success response
     res.status(200).json({
       success: true,
       data: user
@@ -26,60 +43,6 @@ const getProfile = async (req, res) => {
   }
 };
 
-/**
- * PATCH /api/v1/me
- * Update logged-in user's profile (name, phone)
- */
-const updateProfile = async (req, res) => {
-  try {
-    const { name, phone } = req.body;
-
-    const user = await User.findById(req.user.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Update allowed fields only
-    if (name !== undefined) {
-      user.name = name.trim();
-    }
-
-    if (phone !== undefined) {
-      user.phone = phone;
-    }
-
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Profile updated successfully',
-      data: {
-        name: user.name,
-        email: user.email,
-        phone: user.phone
-      }
-    });
-  } catch (error) {
-    // Duplicate phone number error
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        message: 'Phone number already in use'
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update profile'
-    });
-  }
-};
-
 module.exports = {
-  getProfile,
-  updateProfile
+  getProfile
 };

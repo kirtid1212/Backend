@@ -11,6 +11,7 @@ require('./src/firebaseAdmin');
 const v1Routes = require('./src/routes/v1');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 connectDB();
@@ -28,11 +29,11 @@ const corsOptions = {
     ];
 
     // Allow any localhost port for development
-    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.match(/^http:\/\/localhost:\d+$/)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    app.use(cors({
+      origin: true,
+      credentials: true
+    }));
+
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
@@ -64,6 +65,16 @@ app.use(
   })
 );
 app.use(morgan('dev'));
+
+// JSON for normal routes
+app.use(express.json({ limit: '1mb' }));
+
+// RAW body ONLY for PayPal webhook
+app.post('/api/paypal/webhook',
+  express.raw({ type: 'application/json' }),
+  require('./src/webhooks/paypal.webhook')
+);
+
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -128,5 +139,10 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Ecommerce API server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Health check: https://backend-ta8c.onrender.com/health`);
+});
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => process.exit(0));
 });
