@@ -97,11 +97,6 @@ app.listen(PORT, () => {
   console.log(`Health check: https://backend-ta8c.onrender.com/health`);
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Ecommerce API server running on port ${PORT}`);
-  console.log(`Health check: https://backend-ta8c.onrender.com/health`);
-});
-
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   server.close(() => process.exit(0));
