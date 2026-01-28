@@ -13,6 +13,7 @@ const generateAccessToken = async () => {
             `${baseURL}/v1/oauth2/token`,
             'grant_type=client_credentials',
             {
+                timeout: 10000,
                 headers: {
                     Authorization: `Basic ${auth}`,
                     'Content-Type': 'application/x-www-form-urlencoded',
@@ -27,7 +28,13 @@ const generateAccessToken = async () => {
     }
 };
 
+
 const createOrder = async (total) => {
+    try {
+        if (!total || Number(total) <= 0) {
+        throw new Error('Invalid order amount');
+        }
+
     const accessToken = await generateAccessToken();
 
     const response = await axios.post(
@@ -37,13 +44,14 @@ const createOrder = async (total) => {
             purchase_units: [
                 {
                     amount: {
-                        currency_code: "USD",
-                        value: total,
+                        currency_code: "INR",
+                        value: Number(total).toFixed(2),
                     },
                 },
             ],
         },
         {
+            timeout: 10000,
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
@@ -52,15 +60,29 @@ const createOrder = async (total) => {
     );
 
     return response.data;
+}catch (error) {
+    console.error(
+      '❌ PayPal Create Order Error:',
+      error.response?.data || error.message
+    );
+    throw new Error('Failed to create PayPal order');
+  }
 };
 
+
 const captureOrder = async (orderID) => {
+    try {
+    if (!orderID) {
+      throw new Error('Order ID is required');
+    }
+
     const accessToken = await generateAccessToken();
 
     const response = await axios.post(
         `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders/${orderID}/capture`,
         {},
         {
+            timeout: 10000,
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 "Content-Type": "application/json",
@@ -69,6 +91,13 @@ const captureOrder = async (orderID) => {
     );
 
     return response.data;
+    } catch (error) {
+    console.error(
+      '❌ PayPal Capture Error:',
+      error.response?.data || error.message
+    );
+    throw new Error('Failed to capture PayPal order');
+  }
 };
 
 module.exports = {
