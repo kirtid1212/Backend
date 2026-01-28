@@ -6,8 +6,7 @@ const path = require('path');
 const paypalService = require('./paypalService');
 const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
-require('./src/firebaseAdmin'); // Initialize Firebase Admin SDK
-dotenv.config({ path: path.join(__dirname, '.env') });
+require('./src/firebaseAdmin'); 
 
 const v1Routes = require('./src/routes/v1');
 
