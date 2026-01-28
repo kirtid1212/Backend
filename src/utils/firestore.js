@@ -15,8 +15,20 @@ const admin = require('firebase-admin');
  * }
  */
 
-const db = admin.firestore();
 const COLLECTION = 'user_devices';
+
+/**
+ * Get Firestore instance (lazy-load to ensure Firebase is initialized)
+ * @returns {FirebaseFirestore.Firestore}
+ */
+const getDb = () => {
+  try {
+    return admin.firestore();
+  } catch (error) {
+    console.error('Firebase not initialized yet:', error.message);
+    throw new Error('Firebase Admin SDK must be initialized before using Firestore utilities');
+  }
+};
 
 /**
  * Save or update device token in Firestore
@@ -30,6 +42,7 @@ const saveDeviceToken = async (userId, fcmToken, role = 'user', platform = 'web'
   try {
     const docId = `${userId}_${fcmToken.substring(0, 20)}`; // Create unique doc ID
     const now = admin.firestore.Timestamp.now();
+    const db = getDb();
 
     // Get existing doc if it exists
     const existingDoc = await db.collection(COLLECTION).doc(docId).get();
@@ -70,6 +83,7 @@ const saveDeviceToken = async (userId, fcmToken, role = 'user', platform = 'web'
  */
 const getUserTokens = async (userId) => {
   try {
+    const db = getDb();
     const snapshot = await db.collection(COLLECTION)
       .where('userId', '==', userId)
       .where('isActive', '==', true)
@@ -93,6 +107,7 @@ const getUserTokens = async (userId) => {
  */
 const getAdminTokens = async () => {
   try {
+    const db = getDb();
     const snapshot = await db.collection(COLLECTION)
       .where('role', '==', 'admin')
       .where('isActive', '==', true)
@@ -116,6 +131,7 @@ const getAdminTokens = async () => {
  */
 const getAllTokens = async () => {
   try {
+    const db = getDb();
     const snapshot = await db.collection(COLLECTION)
       .where('isActive', '==', true)
       .get();
@@ -139,6 +155,7 @@ const getAllTokens = async () => {
  */
 const markTokenInactive = async (fcmToken) => {
   try {
+    const db = getDb();
     const snapshot = await db.collection(COLLECTION)
       .where('token', '==', fcmToken)
       .get();
@@ -167,6 +184,7 @@ const markTokenInactive = async (fcmToken) => {
  */
 const getStats = async () => {
   try {
+    const db = getDb();
     const allSnapshot = await db.collection(COLLECTION).get();
     const activeSnapshot = await db.collection(COLLECTION)
       .where('isActive', '==', true)
