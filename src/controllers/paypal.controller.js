@@ -7,13 +7,18 @@ exports.createOrder = async (req, res) => {
 try{
     const token = await getAccessToken();
 
-  const amount = req.body.amount;
+  const { amount } = req.body;
 
-  if (!amount) {
+  if (!amount || amount === '' || amount === null || amount === undefined) {
     return res.status(400).json({ error: 'Amount is required' });
   }
 
-  const formattedAmount = Number(amount).toFixed(2);
+  const numericAmount = Number(amount);
+  if (isNaN(numericAmount) || numericAmount <= 0) {
+    return res.status(400).json({ error: 'Amount must be a valid positive number' });
+  }
+
+  const formattedAmount = numericAmount.toFixed(2);
 
   const response = await axios.post(
     `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders`,
@@ -49,20 +54,30 @@ try{
 // CAPTURE PAYMENT
 exports.captureOrder = async (req, res) => {
  try{
+   const { orderId } = req.params;
+   
+   if (!orderId || orderId.trim() === '') {
+     return res.status(400).json({ error: 'Order ID is required' });
+   }
+
    const token = await getAccessToken();
 
   const response = await axios.post(
-    `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders/${req.params.orderId}/capture`,
+    `${process.env.PAYPAL_BASE_URL}/v2/checkout/orders/${orderId}/capture`,
     {},
     {
       headers: { Authorization: `Bearer ${token}` },
     }
   );
 
-  const capture = response.data.purchase_units[0].payments.captures[0];
+  const capture = response.data?.purchase_units?.[0]?.payments?.captures?.[0];
+  
+  if (!capture) {
+    return res.status(400).json({ error: 'Invalid PayPal response structure' });
+  }
 
   await Transaction.create({
-    orderId: req.params.orderId,
+    orderId: orderId,
     transactionId: capture.id,
     amount: capture.amount.value,
     currency: capture.amount.currency_code,
