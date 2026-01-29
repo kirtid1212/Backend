@@ -10,12 +10,18 @@ const { authenticate } = require('./src/middleware/auth.middleware');
 require('./src/firebaseAdmin');
 
 const v1Routes = require('./src/routes/v1');
-const paypalRoutes = require('./src/routes/paypal.routes');
-const paypalWebhook = require('./src/webhooks/paypal.webhook');
 
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
+// Initialize Firebase mAdmin
+//require("./config/firebase");
+require("./src/config/firebase");
+
+// Import user notification routes
+const usernotificationroutes = require("./src/routes/usernotificationroutes");
+
+
 
 connectDB();
 
@@ -58,7 +64,6 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/v1', v1Routes);
-app.use('/api/paypal', paypalRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
@@ -91,3 +96,7 @@ process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down gracefully...');
   server.close(() => process.exit(0));
 });
+
+
+// API Routes
+app.use("routes/usernotificationroutes.js", usernotificationroutes);
