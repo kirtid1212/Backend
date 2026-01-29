@@ -35,7 +35,7 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
       default: 'pending'
     },
-    payment_method: { type: String, enum: ['COD'], default: 'COD' },
+    payment_method: { type: String, enum: ['COD', 'PayU'], default: 'COD' },
     payment_status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
     notes: { type: String, default: '' },
     shipment_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Shipment', default: null },

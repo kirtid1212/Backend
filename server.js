@@ -5,6 +5,8 @@ const morgan = require('morgan');
 const path = require('path');
 const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
+const { generateHash } = require("./payu");
+const { authenticate } = require('./src/middleware/auth.middleware');
 require('./src/firebaseAdmin');
 
 const v1Routes = require('./src/routes/v1');
@@ -19,9 +21,10 @@ connectDB();
 
 // Configure CORS with proper options for file uploads and preflight requests
 app.use(cors({
-  origin: '*',
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.options('*', cors());
@@ -32,6 +35,8 @@ app.post(
   express.raw({ type: 'application/json' }),
   paypalWebhook
 );
+
+app.post("/generate-hash", generateHash);
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -76,5 +81,10 @@ const server = app.listen(PORT, () => {
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => process.exit(0));
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
   server.close(() => process.exit(0));
 });
