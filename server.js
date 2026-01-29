@@ -6,9 +6,16 @@ const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
 require('./src/firebaseAdmin'); // Initialize Firebase Admin SDK
 const v1Routes = require('./src/routes/v1');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Initialize Firebase mAdmin
+//require("./config/firebase");
+require("./src/config/firebase");
+
+// Import user notification routes
+const usernotificationroutes = require("./src/routes/usernotificationroutes");
+
+
 
 connectDB();
 
@@ -67,6 +74,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/v1', v1Routes);
+app.use('/api/notifications', usernotificationroutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
@@ -81,3 +89,7 @@ app.listen(PORT, () => {
   console.log(`Ecommerce API server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
 });
+
+
+// API Routes
+app.use("routes/usernotificationroutes.js", usernotificationroutes);
