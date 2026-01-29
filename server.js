@@ -18,9 +18,6 @@ const PORT = process.env.PORT || 3000;
 //require("./config/firebase");
 require("./src/config/firebase");
 
-// Import user notification routes
-const usernotificationroutes = require("./src/routes/usernotificationroutes");
-
 
 
 connectDB();
@@ -96,7 +93,3 @@ process.on('SIGINT', () => {
   console.log('SIGINT received. Shutting down gracefully...');
   server.close(() => process.exit(0));
 });
-
-
-// API Routes
-app.use("routes/usernotificationroutes.js", usernotificationroutes);
