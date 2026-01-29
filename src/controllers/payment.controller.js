@@ -23,6 +23,7 @@ exports.initiatePayment = async (req, res) => {
       udf5,
       userCredential
     } = req.body;
+    amount = Number(amount).toFixed(2);
 
     const userId = req.user.id;
 

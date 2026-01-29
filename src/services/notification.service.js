@@ -22,15 +22,15 @@ const sendNotificationToDevice = async (fcmToken, title, body, data = {}) => {
     return { success: true, messageId: response };
   } catch (error) {
     console.error('Error sending notification:', error);
-    
+
     // Handle invalid token
     if (error.code === 'messaging/invalid-registration-token' ||
-        error.code === 'messaging/mismatched-credential' ||
-        error.code === 'messaging/message-rate-exceeded') {
+      error.code === 'messaging/mismatched-credential' ||
+      error.code === 'messaging/message-rate-exceeded') {
       // Mark token as inactive
       await DeviceToken.updateOne({ fcmToken }, { isActive: false });
     }
-    
+
     return { success: false, error: error.message };
   }
 };
@@ -122,7 +122,7 @@ const sendNotificationToUsers = async (userIds, title, body, data = {}) => {
     }
 
     const tokens = deviceTokens.map(dt => dt.fcmToken);
-    
+
     const message = {
       notification: {
         title,
