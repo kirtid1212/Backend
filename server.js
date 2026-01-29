@@ -14,9 +14,7 @@ const v1Routes = require('./src/routes/v1');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-// Initialize Firebase mAdmin
-//require("./config/firebase");
-require("./src/config/firebase");
+
 
 
 
