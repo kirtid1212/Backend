@@ -2,11 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
+const path = require('path');
 const fileUpload = require('express-fileupload');
 const connectDB = require('./src/utils/database');
-require('./src/firebaseAdmin'); // Initialize Firebase Admin SDK
+const { generateHash } = require("./payu");
+const { authenticate } = require('./src/middleware/auth.middleware');
+require('./src/firebaseAdmin');
+
 const v1Routes = require('./src/routes/v1');
+
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 // Initialize Firebase mAdmin
 //require("./config/firebase");
@@ -20,43 +26,24 @@ const usernotificationroutes = require("./src/routes/usernotificationroutes");
 connectDB();
 
 // Configure CORS with proper options for file uploads and preflight requests
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    // In production, replace with your actual frontend domain(s)
-    const allowedOrigins = [
-      'http://localhost:62896',
-      'http://localhost:3000',
-      'http://127.0.0.1:62896',
-      'http://127.0.0.1:3000'
-    ];
-    
-    // Allow any localhost port for development
-    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed)) || origin.match(/^http:\/\/localhost:\d+$/)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: [
-    'Content-Type',
-    'Content-Length',
-    'Accept',
-    'Authorization',
-    'Origin',
-    'Cache-Control',
-    'X-Requested-With',
-    'X-File-Name'
-  ],
-  exposedHeaders: ['Content-Disposition', 'Content-Length'],
-  credentials: true,
-  optionsSuccessStatus: 204, // Some legacy browsers choke on 200
-  preflightContinue: false, // Don't pass preflight requests to next middleware
-  maxAge: 86400 // Cache preflight response for 24 hours
-};
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
-app.use(cors(corsOptions));
+app.options('*', cors());
+
+// PayPal webhook (RAW body) - MUST be before express.json()
+app.post(
+  '/api/paypal/webhook',
+  express.raw({ type: 'application/json' }),
+  paypalWebhook
+);
+
+app.post("/generate-hash", generateHash);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(
@@ -74,20 +61,37 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/v1', v1Routes);
-app.use('/api/notifications', usernotificationroutes);
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
 app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.error('Bad JSON:', err.message);
+    return res.status(400).json({ 
+      error: 'Invalid JSON format',
+      message: 'Request body contains malformed JSON'
+    });
+  }
   console.error(err.stack || err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(PORT, () => {
+
+
+const server = app.listen(PORT, () => {
   console.log(`Ecommerce API server running on port ${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
+});
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  server.close(() => process.exit(0));
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
+  server.close(() => process.exit(0));
 });
 
 
