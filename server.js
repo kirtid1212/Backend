@@ -8,13 +8,15 @@ const connectDB = require('./src/utils/database');
 const { generateHash } = require("./payu");
 const { authenticate } = require('./src/middleware/auth.middleware');
 require('./src/firebaseAdmin');
-
+//const { paypalWebhook } = require('./src/controllers/paypal.controller');
 const v1Routes = require('./src/routes/v1');
 
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-
+// Initialize Firebase mAdmin
+//require("./config/firebase");
+//require("./src/config/firebase");
 
 
 
@@ -31,11 +33,11 @@ app.use(cors({
 app.options('*', cors());
 
 // PayPal webhook (RAW body) - MUST be before express.json()
-app.post(
-  '/api/paypal/webhook',
-  express.raw({ type: 'application/json' }),
-  paypalWebhook
-);
+// app.post(
+//   '/api/paypal/webhook',
+//   express.raw({ type: 'application/json' }),
+//   paypalWebhook
+// );
 
 // JSON and URL-encoded body parsers - MUST be before other routes
 app.use(express.json({ limit: '1mb' }));
