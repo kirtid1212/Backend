@@ -9,7 +9,7 @@ const { generatePaymentHash, verifyPaymentHash } = require('../../payu');
  */
 exports.initiatePayment = async (req, res) => {
   try {
-    const {
+    let{
       amount,
       productinfo,
       firstname,
@@ -40,8 +40,7 @@ exports.initiatePayment = async (req, res) => {
       });
     }
 
-    amount = Number(amount).toFixed(2);
-
+    amount = amount = parseFloat(amount).toFixed(2);
 
     const key = process.env.PAYU_KEY;
     const salt = process.env.PAYU_SALT;
