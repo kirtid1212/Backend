@@ -23,7 +23,6 @@ exports.initiatePayment = async (req, res) => {
       udf5,
       userCredential
     } = req.body;
-    amount = Number(amount).toFixed(2);
 
     const userId = req.user.id;
 
@@ -33,6 +32,16 @@ exports.initiatePayment = async (req, res) => {
         message: 'Missing required fields: amount, productinfo, firstname, email, phone'
       });
     }
+
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount provided"
+      });
+    }
+
+    amount = Number(amount).toFixed(2);
+
 
     const key = process.env.PAYU_KEY;
     const salt = process.env.PAYU_SALT;
