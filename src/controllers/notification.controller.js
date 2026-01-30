@@ -1,3 +1,5 @@
+const admin = require('firebase-admin');
+
 const {
   sendNotificationToDevice,
   sendNotificationToUser,
@@ -248,6 +250,85 @@ const getStats = async (req, res) => {
   }
 };
 
+
+//////////////////////////////////User sided notitifications///////////////////////////////////////////
+
+
+const sendPaymentSuccessNotification = async (orderId, userId) => {
+  try {
+    const title = "Payment Successful";
+    const body = "Payment done successfully and order placed";
+
+    const devices = await DeviceToken.find({
+      userId,
+      isActive: true,
+    });
+
+    const tokens = devices.map(d => d.fcmToken);
+
+    if (tokens.length === 0) {
+      console.log("⚠️ No FCM tokens found for user:", userId);
+      return;
+    }
+
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      data: {
+        type: "payment_success",
+        orderId: orderId.toString(),
+        userId: userId.toString(),
+      },
+    });
+
+    console.log("🔔 Payment success sent:", response.successCount);
+  } catch (error) {
+    console.error("❌ Error sending payment success notification:", error);
+    throw error;
+  }
+};
+
+
+const sendOrderDeliveredNotification = async (orderId, userId) => {
+  try {
+    const title = "Order Delivered";
+    const body = "Your order has been successfully delivered";
+
+    const devices = await DeviceToken.find({
+      userId,
+      isActive: true,
+    });
+
+    const tokens = devices.map(d => d.fcmToken);
+
+    if (tokens.length === 0) {
+      console.log("⚠️ No FCM tokens found for user:", userId);
+      return;
+    }
+
+    const response = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification: { title, body },
+      data: {
+        type: "order_delivered",
+        orderId: orderId.toString(),
+        userId: userId.toString(),
+      },
+    });
+
+    console.log("🔔 Order delivered sent:", response.successCount);
+  } catch (error) {
+    console.error("❌ Error sending order delivered notification:", error);
+    throw error;
+  }
+};
+
+
+
+
+
+
+
 // Export all controller functions
 module.exports = {
   registerDevice,
@@ -258,5 +339,7 @@ module.exports = {
   sendToUser,
   sendToUsers,
   sendBroadcast,
-  getStats
+  getStats,
+  sendOrderDeliveredNotification,
+  sendPaymentSuccessNotification,
 };
