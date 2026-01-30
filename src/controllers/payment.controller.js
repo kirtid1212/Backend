@@ -9,7 +9,7 @@ const { generatePaymentHash, verifyPaymentHash } = require('../../payu');
  */
 exports.initiatePayment = async (req, res) => {
   try {
-    const {
+    let{
       amount,
       productinfo,
       firstname,
@@ -32,6 +32,15 @@ exports.initiatePayment = async (req, res) => {
         message: 'Missing required fields: amount, productinfo, firstname, email, phone'
       });
     }
+
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid amount provided"
+      });
+    }
+
+    amount = amount = parseFloat(amount).toFixed(2);
 
     const key = process.env.PAYU_KEY;
     const salt = process.env.PAYU_SALT;
