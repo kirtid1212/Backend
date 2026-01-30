@@ -323,12 +323,6 @@ const sendOrderDeliveredNotification = async (orderId, userId) => {
   }
 };
 
-
-
-
-
-
-
 // Export all controller functions
 module.exports = {
   registerDevice,

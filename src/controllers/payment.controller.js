@@ -3,6 +3,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const { v4: uuidv4 } = require('uuid');
 const { generatePaymentHash, verifyPaymentHash } = require('../../payu');
+const { exponentialBackoff } = require('../middleware/payu.middleware');
 
 /**
  * Initiate Payment - Generate payment parameters for Flutter SDK
@@ -55,20 +56,42 @@ exports.initiatePayment = async (req, res) => {
       });
     }
 
-    // Generate payment hash
-    const hash = generatePaymentHash({
-      key,
-      txnid,
-      amount,
-      productinfo,
-      firstname,
-      email,
-      udf1,
-      udf2,
-      udf3,
-      udf4,
-      udf5
-    });
+    // Check if transaction already exists
+    const existingOrder = await Order.findOne({ order_number: txnid });
+    if (existingOrder && existingOrder.payment_status === 'paid') {
+      return res.status(409).json({
+        success: false,
+        message: 'Transaction already completed',
+        error: 'TRANSACTION_ALREADY_EXISTS'
+      });
+    }
+
+    // Generate payment hash with error handling
+    let hash;
+    try {
+      hash = await exponentialBackoff(() => {
+        return generatePaymentHash({
+          key,
+          txnid,
+          amount,
+          productinfo,
+          firstname,
+          email,
+          udf1,
+          udf2,
+          udf3,
+          udf4,
+          udf5
+        });
+      });
+    } catch (error) {
+      console.error('Hash generation failed:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Payment initialization failed. Please try again.',
+        error: 'HASH_GENERATION_FAILED'
+      });
+    }
 
     // Store payment session
     global.paymentSessions = global.paymentSessions || {};
@@ -116,10 +139,21 @@ exports.initiatePayment = async (req, res) => {
 
   } catch (error) {
     console.error('Payment initiation error:', error);
+    
+    // Handle specific PayU errors
+    if (error.message?.includes('Too many Requests')) {
+      return res.status(429).json({
+        success: false,
+        message: 'Too many payment requests. Please try again in 60 seconds.',
+        error: 'PAYU_RATE_LIMIT',
+        retryAfter: 60
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Payment initiation failed',
-      error: error.message
+      message: 'Payment initiation failed. Please try again.',
+      error: 'PAYMENT_INITIATION_FAILED'
     });
   }
 };
@@ -149,22 +183,34 @@ exports.paymentSuccess = async (req, res) => {
 
     console.log(`Payment success callback received for txnid: ${txnid}`);
 
-    // Verify hash for security
-    const isValidHash = verifyPaymentHash({
-      key,
-      txnid,
-      amount,
-      productinfo,
-      firstname,
-      email,
-      status,
-      receivedHash: hash,
-      udf1,
-      udf2,
-      udf3,
-      udf4,
-      udf5
-    });
+    // Verify hash for security with error handling
+    let isValidHash;
+    try {
+      isValidHash = await exponentialBackoff(() => {
+        return verifyPaymentHash({
+          key,
+          txnid,
+          amount,
+          productinfo,
+          firstname,
+          email,
+          status,
+          receivedHash: hash,
+          udf1,
+          udf2,
+          udf3,
+          udf4,
+          udf5
+        });
+      });
+    } catch (error) {
+      console.error('Hash verification failed:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Payment verification failed',
+        error: 'HASH_VERIFICATION_FAILED'
+      });
+    }
 
     if (!isValidHash) {
       console.error(`Invalid hash verification for txnid: ${txnid}`);
@@ -175,6 +221,22 @@ exports.paymentSuccess = async (req, res) => {
     }
 
     if (status === 'success') {
+      // Check for duplicate payment processing
+      const existingOrder = await Order.findOne({ order_number: txnid });
+      if (existingOrder && existingOrder.payment_status === 'paid') {
+        console.log(`Duplicate payment success for txnid: ${txnid}`);
+        return res.json({
+          success: true,
+          message: 'Payment already processed',
+          data: {
+            txnid,
+            mihpayid: existingOrder.payment_details?.mihpayid,
+            amount,
+            status: 'already_processed'
+          }
+        });
+      }
+
       const paymentSession = global.paymentSessions?.[txnid];
 
       const updateData = {
@@ -195,11 +257,22 @@ exports.paymentSuccess = async (req, res) => {
         updateData.user_id = paymentSession.userId;
       }
 
-      await Order.findOneAndUpdate(
-        { order_number: txnid },
-        updateData,
-        { new: true }
-      );
+      try {
+        await exponentialBackoff(async () => {
+          return await Order.findOneAndUpdate(
+            { order_number: txnid },
+            updateData,
+            { new: true }
+          );
+        });
+      } catch (error) {
+        console.error('Order update failed:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Payment received but order update failed',
+          error: 'ORDER_UPDATE_FAILED'
+        });
+      }
 
       if (global.paymentSessions?.[txnid]) {
         delete global.paymentSessions[txnid];
@@ -227,10 +300,20 @@ exports.paymentSuccess = async (req, res) => {
 
   } catch (error) {
     console.error('Payment success handler error:', error);
+    
+    // Handle specific errors
+    if (error.message?.includes('Too many Requests')) {
+      return res.status(429).json({
+        success: false,
+        message: 'Payment service busy. Please contact support if payment was deducted.',
+        error: 'PAYU_RATE_LIMIT'
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Payment processing failed',
-      error: error.message
+      message: 'Payment processing failed. Please contact support if payment was deducted.',
+      error: 'PAYMENT_PROCESSING_FAILED'
     });
   }
 };
@@ -247,18 +330,34 @@ exports.paymentFailure = async (req, res) => {
 
     console.log(`Payment failure callback received for txnid: ${txnid}`);
 
-    await Order.findOneAndUpdate(
-      { order_number: txnid },
-      {
-        payment_status: 'failed',
-        payment_date: new Date(),
-        payment_error: error_Message || payuError
-      }
-    );
+    try {
+      await exponentialBackoff(async () => {
+        return await Order.findOneAndUpdate(
+          { order_number: txnid },
+          {
+            payment_status: 'failed',
+            payment_method: 'PayU',
+            payment_date: new Date(),
+            payment_details: {
+              txnid,
+              status,
+              error: payuError,
+              error_message: error_Message
+            }
+          },
+          { new: true }
+        );
+      });
+    } catch (error) {
+      console.error('Order update failed on payment failure:', error);
+    }
 
+    // Clean up payment session
     if (global.paymentSessions?.[txnid]) {
       delete global.paymentSessions[txnid];
     }
+
+    console.log(`Payment failed for txnid: ${txnid}, status: ${status}`);
 
     res.json({
       success: false,
@@ -266,21 +365,69 @@ exports.paymentFailure = async (req, res) => {
       data: {
         txnid,
         status,
-        error: error_Message || payuError
+        error: payuError,
+        error_message: error_Message
       }
     });
 
   } catch (error) {
     console.error('Payment failure handler error:', error);
+    
     res.status(500).json({
       success: false,
-      message: 'Payment failure processing failed',
-      error: error.message
+      message: 'Payment failure processing error',
+      error: 'PAYMENT_FAILURE_PROCESSING_FAILED'
     });
   }
 };
 
-// Get payment details by transaction ID
+/**
+ * Get payment status
+ */
+exports.getPaymentStatus = async (req, res) => {
+  try {
+    const { txnid } = req.params;
+    
+    if (!txnid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Transaction ID is required'
+      });
+    }
+
+    const order = await Order.findOne({ order_number: txnid });
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Transaction not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        txnid,
+        payment_status: order.payment_status,
+        payment_method: order.payment_method,
+        payment_date: order.payment_date,
+        amount: order.total_amount
+      }
+    });
+
+  } catch (error) {
+    console.error('Get payment status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get payment status',
+      error: 'GET_PAYMENT_STATUS_FAILED'
+    });
+  }
+};
+
+/**
+ * Get payment details by transaction ID
+ */
 exports.getPaymentDetails = async (req, res) => {
   try {
     const { txnid } = req.params;
@@ -300,7 +447,7 @@ exports.getPaymentDetails = async (req, res) => {
       success: true,
       data: {
         txnid: order.order_number,
-        amount: order.total,
+        amount: order.total_amount,
         payment_status: order.payment_status,
         payment_method: order.payment_method,
         payment_details: order.payment_details,
@@ -316,7 +463,7 @@ exports.getPaymentDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch payment details',
-      error: error.message
+      error: 'FETCH_DETAILS_FAILED'
     });
   }
 };
