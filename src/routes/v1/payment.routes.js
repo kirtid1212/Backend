@@ -31,6 +31,9 @@ router.get('/details/:txnid', authenticate, paymentController.getPaymentDetails)
 // GET: Get payment status by transaction ID (requires authentication)
 router.get('/status/:txnid', authenticate, paymentController.getPaymentStatus);
 
+// GET: Get PayU service health status
+router.get('/health', paymentController.getServiceHealth);
+
 // Apply PayU error handler to all routes
 router.use(handlePayuError);
 

@@ -7,20 +7,40 @@ const payuCache = new NodeCache({ stdTTL: 300 });
 // Cache for transaction tracking (TTL: 1 hour)
 const transactionCache = new NodeCache({ stdTTL: 3600 });
 
+// Circuit breaker for PayU API
+const circuitBreaker = {
+  failures: 0,
+  lastFailureTime: null,
+  threshold: 5,
+  timeout: 60000, // 1 minute
+  isOpen() {
+    return this.failures >= this.threshold && 
+           (Date.now() - this.lastFailureTime) < this.timeout;
+  },
+  recordSuccess() {
+    this.failures = 0;
+    this.lastFailureTime = null;
+  },
+  recordFailure() {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+  }
+};
+
 /**
- * PayU Rate Limiter - 1 request per second per user
+ * PayU Rate Limiter - More lenient for better UX
  */
 const payuRateLimit = rateLimit({
-  windowMs: 1000, // 1 second
-  max: 1, // 1 request per second per IP
+  windowMs: 2000, // 2 seconds
+  max: 2, // 2 requests per 2 seconds per user
   keyGenerator: (req) => {
-    // Use user ID if available, otherwise fall back to IP
     return req.user?.id || req.ip;
   },
   message: {
     success: false,
-    message: 'Too many payment requests. Please wait 1 second before trying again.',
-    error: 'RATE_LIMIT_EXCEEDED'
+    message: 'Too many payment requests. Please wait 2 seconds before trying again.',
+    error: 'RATE_LIMIT_EXCEEDED',
+    retryAfter: 2
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -96,16 +116,30 @@ const cachePayuResponse = (req, res, next) => {
 };
 
 /**
- * Exponential backoff utility for PayU API calls
+ * Enhanced exponential backoff with circuit breaker
  */
 const exponentialBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
+  // Check circuit breaker
+  if (circuitBreaker.isOpen()) {
+    throw new Error('PayU service temporarily unavailable. Please try again in 60 seconds.');
+  }
+
   let lastError;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      return await fn();
+      const result = await fn();
+      circuitBreaker.recordSuccess();
+      return result;
     } catch (error) {
       lastError = error;
+      
+      // Handle PayU rate limiting specifically
+      if (error.message?.includes('Too many Requests') || 
+          error.response?.status === 429) {
+        circuitBreaker.recordFailure();
+        throw new Error('Too many Requests');
+      }
       
       // Don't retry on client errors (4xx)
       if (error.response?.status >= 400 && error.response?.status < 500) {
@@ -113,10 +147,11 @@ const exponentialBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
       }
       
       if (attempt === maxRetries) {
+        circuitBreaker.recordFailure();
         break;
       }
       
-      const delay = baseDelay * Math.pow(2, attempt);
+      const delay = Math.min(baseDelay * Math.pow(2, attempt), 10000); // Max 10s delay
       console.log(`PayU API attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -136,8 +171,19 @@ const handlePayuError = (error, req, res, next) => {
       error.response?.status === 429) {
     return res.status(429).json({
       success: false,
-      message: 'Payment service is temporarily busy. Please try again in 60 seconds.',
+      message: 'Payment service is temporarily busy due to high traffic. Please try again in 60 seconds.',
       error: 'PAYU_RATE_LIMIT',
+      retryAfter: 60,
+      suggestion: 'Please wait and try again. If payment was deducted, contact support.'
+    });
+  }
+
+  // Handle circuit breaker open state
+  if (error.message?.includes('temporarily unavailable')) {
+    return res.status(503).json({
+      success: false,
+      message: 'Payment service is temporarily unavailable due to technical issues.',
+      error: 'SERVICE_CIRCUIT_OPEN',
       retryAfter: 60
     });
   }
@@ -148,7 +194,7 @@ const handlePayuError = (error, req, res, next) => {
       error.code === 'ENOTFOUND') {
     return res.status(503).json({
       success: false,
-      message: 'Payment service is temporarily unavailable. Please try again.',
+      message: 'Payment service is temporarily unavailable. Please check your connection and try again.',
       error: 'SERVICE_UNAVAILABLE'
     });
   }
@@ -175,5 +221,6 @@ module.exports = {
   preventDuplicateTransaction,
   cachePayuResponse,
   exponentialBackoff,
-  handlePayuError
+  handlePayuError,
+  circuitBreaker
 };

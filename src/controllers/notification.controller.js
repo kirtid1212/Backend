@@ -297,6 +297,72 @@ const sendTestNotification = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/v1/notifications/payment-success-v2
+ * Send payment success notification to user and admin
+ */
+const paymentSuccessNotification = async (req, res) => {
+    try {
+        const { orderId, userId } = req.body;
+
+        if (!orderId || !userId) {
+            return res.status(400).json({ success: false, error: 'orderId and userId are required' });
+        }
+
+        const order = await Order.findById(orderId).populate('user');
+        if (!order) {
+            return res.status(404).json({ success: false, error: 'Order not found' });
+        }
+
+        await createNotification({
+            title: '💰 Payment Successful',
+            message: `Payment received for order #${order.order_number}`,
+            type: 'PAYMENT_SUCCESS',
+            orderId,
+            userId,
+            metadata: { orderNumber: order.order_number, amount: order.total }
+        });
+
+        res.json({ success: true, message: 'Payment notification sent' });
+    } catch (error) {
+        console.error('Error sending payment notification:', error);
+        res.status(500).json({ success: false, error: 'Failed to send notification' });
+    }
+};
+
+/**
+ * POST /api/v1/notifications/order-delivered-v2
+ * Send order delivered notification to user
+ */
+const orderDeliveredNotification = async (req, res) => {
+    try {
+        const { orderId, userId } = req.body;
+
+        if (!orderId || !userId) {
+            return res.status(400).json({ success: false, error: 'orderId and userId are required' });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, error: 'Order not found' });
+        }
+
+        await createNotification({
+            title: '📦 Order Delivered',
+            message: `Your order #${order.order_number} has been delivered`,
+            type: 'DELIVERY_SUCCESS',
+            orderId,
+            userId,
+            metadata: { orderNumber: order.order_number }
+        });
+
+        res.json({ success: true, message: 'Delivery notification sent' });
+    } catch (error) {
+        console.error('Error sending delivery notification:', error);
+        res.status(500).json({ success: false, error: 'Failed to send notification' });
+    }
+};
+
 module.exports = {
     createNotification,
     getAllNotifications,
@@ -306,5 +372,7 @@ module.exports = {
     deleteNotification,
     registerAdminToken,
     unregisterAdminToken,
-    sendTestNotification
+    sendTestNotification,
+    paymentSuccessNotification,
+    orderDeliveredNotification
 };
