@@ -1,8 +1,8 @@
-const Notification = require('../../models/Notification');
-const AdminToken = require('../../models/AdminToken');
-const pushNotificationService = require('../../utils/pushNotification.service');
-const Order = require('../../models/Order');
-const User = require('../../models/User');
+const Notification = require('../models/Notification');
+const AdminToken = require('../models/AdminToken');
+const pushNotificationService = require('../utils/pushNotification.service');
+const Order = require('../models/Order');
+const User = require('../models/User');
 
 /**
  * Create a new notification (internal use)
