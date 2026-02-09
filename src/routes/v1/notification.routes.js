@@ -1,16 +1,19 @@
 const express = require('express');
 
 const {
-  getAllNotifications,
-  getUnreadCount,
-  markAsRead,
-  markAllAsRead,
-  deleteNotification,
-  registerAdminToken,
-  unregisterAdminToken,
+  registerDevice,
+  unregisterDevice,
+  getUserDevices,
   sendTestNotification,
+  sendToDevice,
+  sendToUser,
+  sendToUsers,
+  sendBroadcast,
+  getStats,
+  sendPaymentSuccessNotification,
+  sendOrderDeliveredNotification,
   paymentSuccessNotification,
-  orderDeliveredNotification
+  orderDeliveredNotification        
 } = require('../../controllers/notification.controller');
 
 const { authenticate, requireAdmin } = require('../../middleware/auth.middleware');
@@ -18,25 +21,255 @@ const { authenticate, requireAdmin } = require('../../middleware/auth.middleware
 const router = express.Router();
 
 /* =========================================================
-   ADMIN NOTIFICATION MANAGEMENT
+   DEVICE REGISTRATION ROUTES (AUTHENTICATED)
    ========================================================= */
-router.get('/', authenticate, requireAdmin, getAllNotifications);
-router.get('/unread-count', authenticate, requireAdmin, getUnreadCount);
-router.patch('/:id/read', authenticate, requireAdmin, markAsRead);
-router.patch('/read-all', authenticate, requireAdmin, markAllAsRead);
-router.delete('/:id', authenticate, requireAdmin, deleteNotification);
+router.post('/register-device', authenticate, registerDevice);
+router.post('/unregister-device', authenticate, unregisterDevice);
+router.get('/devices', authenticate, getUserDevices);
 
 /* =========================================================
-   ADMIN TOKEN MANAGEMENT
+   TEST NOTIFICATION (AUTHENTICATED)
    ========================================================= */
-router.post('/register-token', authenticate, requireAdmin, registerAdminToken);
-router.delete('/unregister-token', authenticate, requireAdmin, unregisterAdminToken);
-router.post('/test', authenticate, requireAdmin, sendTestNotification);
+router.post('/test', authenticate, sendTestNotification);
 
 /* =========================================================
-   NOTIFICATION TRIGGERS
+   ADMIN ROUTES
    ========================================================= */
-router.post('/payment-success-v2', authenticate, paymentSuccessNotification);
-router.post('/order-delivered-v2', authenticate, requireAdmin, orderDeliveredNotification);
+router.post('/send-to-device', authenticate, requireAdmin, sendToDevice);
+router.post('/send-to-user', authenticate, requireAdmin, sendToUser);
+router.post('/send-to-users', authenticate, requireAdmin, sendToUsers);
+router.post('/broadcast', authenticate, requireAdmin, sendBroadcast);
+router.get('/stats', authenticate, requireAdmin, getStats);
+
+/* =========================================================
+   PAYMENT SUCCESS NOTIFICATION (OLD – KEPT AS IS ✅)
+   ========================================================= */
+/**
+ * POST /api/notifications/payment-success
+ * Body: { orderId, userId }
+ */
+router.post('/payment-success', authenticate, async (req, res) => {
+  try {
+    const { orderId, userId } = req.body;
+
+    if (!orderId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: orderId, userId',
+      });
+    }
+
+    await sendPaymentSuccessNotification(orderId, userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Payment success notification sent successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error sending payment success notification',
+      error: error.message,
+    });
+  }
+});
+
+/* =========================================================
+   ORDER DELIVERED NOTIFICATION (OLD – KEPT AS IS ✅)
+   ========================================================= */
+/**
+ * POST /api/notifications/order-delivered
+ * Body: { orderId, userId }
+ */
+router.post('/order-delivered', authenticate, async (req, res) => {
+  try {
+    const { orderId, userId } = req.body;
+
+    if (!orderId || !userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: orderId, userId',
+      });
+    }
+
+    await sendOrderDeliveredNotification(orderId, userId);
+
+    res.status(200).json({
+      success: true,
+      message: 'Order delivered notification sent successfully',
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error sending order delivered notification',
+      error: error.message,
+    });
+  }
+});
+
+/* =========================================================
+   ✅ NEW – PRODUCTION READY APIs (USER + ADMIN FLOW)
+   ========================================================= */
+
+/**
+ * POST /api/notifications/payment-success-v2
+ * Triggered after successful payment
+ * → Notifies USER + ADMIN
+ */
+router.post(
+  '/payment-success-v2',
+  authenticate,
+  paymentSuccessNotification
+);
+
+/**
+ * POST /api/notifications/order-delivered-v2
+ * Admin marks order as delivered
+ * → Notifies USER
+ */
+router.post(
+  '/order-delivered-v2',
+  authenticate,
+  requireAdmin,
+  orderDeliveredNotification
+);
 
 module.exports = router;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// const express = require('express');
+
+// const {
+//   registerDevice,
+//   unregisterDevice,
+//   getUserDevices,
+//   sendTestNotification,
+//   sendToDevice,
+//   sendToUser,
+//   sendToUsers,
+//   sendBroadcast,
+//   getStats,
+//   sendPaymentSuccessNotification,
+//   sendOrderDeliveredNotification,
+// } = require('../../controllers/notification.controller');
+
+// const { authenticate, requireAdmin } = require('../../middleware/auth.middleware');
+
+// const router = express.Router();
+
+// /* =========================================================
+//    DEVICE REGISTRATION ROUTES (AUTHENTICATED)
+//    ========================================================= */
+// router.post('/register-device', authenticate, registerDevice);
+// router.post('/unregister-device', authenticate, unregisterDevice);
+// router.get('/devices', authenticate, getUserDevices);
+
+// /* =========================================================
+//    TEST NOTIFICATION (AUTHENTICATED)
+//    ========================================================= */
+// router.post('/test', authenticate, sendTestNotification);
+
+// /* =========================================================
+//    ADMIN ROUTES
+//    ========================================================= */
+// router.post('/send-to-device', authenticate, requireAdmin, sendToDevice);
+// router.post('/send-to-user', authenticate, requireAdmin, sendToUser);
+// router.post('/send-to-users', authenticate, requireAdmin, sendToUsers);
+// router.post('/broadcast', authenticate, requireAdmin, sendBroadcast);
+// router.get('/stats', authenticate, requireAdmin, getStats);
+
+// /* =========================================================
+//    PAYMENT SUCCESS NOTIFICATION
+//    ========================================================= */
+// /**
+//  * POST /api/notifications/payment-success
+//  * Body: { orderId, userId }
+//  */
+// router.post('/payment-success', authenticate, async (req, res) => {
+//   try {
+//     const { orderId, userId } = req.body;
+
+//     if (!orderId || !userId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Missing required fields: orderId, userId',
+//       });
+//     }
+
+//     await sendPaymentSuccessNotification(orderId, userId);
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Payment success notification sent successfully',
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error sending payment success notification',
+//       error: error.message,
+//     });
+//   }
+// });
+
+// /* =========================================================
+//    ORDER DELIVERED NOTIFICATION
+//    ========================================================= */
+// /**
+//  * POST /api/notifications/order-delivered
+//  * Body: { orderId, userId }
+//  */
+// router.post('/order-delivered', authenticate, async (req, res) => {
+//   try {
+//     const { orderId, userId } = req.body;
+
+//     if (!orderId || !userId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Missing required fields: orderId, userId',
+//       });
+//     }
+
+//     await sendOrderDeliveredNotification(orderId, userId);
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Order delivered notification sent successfully',
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error sending order delivered notification',
+//       error: error.message,
+//     });
+//   }
+// });
+
+// module.exports = router;

@@ -43,8 +43,10 @@ app.options('*', cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+const { payuRateLimit } = require('./src/middleware/payu.middleware');
+
 // PayU hash generation endpoint - AFTER express.json() so it can parse JSON
-app.post("/generate-hash", generateHash);
+app.post("/generate-hash", payuRateLimit, generateHash);
 
 app.use(
   fileUpload({
