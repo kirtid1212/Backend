@@ -55,15 +55,30 @@ const hydrateOrderItems = async (items) => {
 
 const createOrder = async (req, res) => {
   try {
+    console.log('[ORDER] Create order request:', {
+      userId: req.user?.id,
+      body: req.body,
+      headers: { authorization: req.headers.authorization ? 'present' : 'missing' }
+    });
+
     const userId = req.user.id;
     const { mode = 'cart', addressId, paymentMethod, notes, sessionId } = req.body;
 
     if (!addressId || !paymentMethod) {
-      return res.status(400).json({ message: 'Address and payment method are required' });
+      console.log('[ORDER] Validation failed - missing fields:', { addressId, paymentMethod });
+      return res.status(400).json({
+        message: 'Address and payment method are required',
+        missing: {
+          addressId: !addressId,
+          paymentMethod: !paymentMethod
+        }
+      });
     }
 
-    if (paymentMethod !== 'COD') {
-      return res.status(400).json({ message: 'Only COD is supported' });
+    const VALID_PAYMENT_METHODS = ['COD', 'PayU', 'Stripe'];
+    if (!VALID_PAYMENT_METHODS.includes(paymentMethod)) {
+      console.log('[ORDER] Invalid payment method:', paymentMethod);
+      return res.status(400).json({ message: `Invalid payment method. Supported: ${VALID_PAYMENT_METHODS.join(', ')}` });
     }
 
     const address = await Address.findOne({ _id: addressId, user_id: userId });
@@ -106,8 +121,8 @@ const createOrder = async (req, res) => {
       address_id: addressId,
       ...totals,
       status: 'pending',
-      payment_method: 'COD',
-      payment_status: 'pending',
+      payment_method: paymentMethod,
+      payment_status: paymentMethod === 'COD' ? 'pending' : 'awaiting_payment',
       notes: notes || '',
       status_history: [{ status: 'pending', at: new Date() }]
     });
@@ -146,18 +161,30 @@ const createOrder = async (req, res) => {
 
     res.status(201).json({ success: true, data: order });
   } catch (error) {
+    console.error('[ORDER] Error creating order:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      body: req.body
+    });
+
     if (error.message === 'Product not available' || error.message === 'Variant not available') {
       return res.status(400).json({ message: error.message });
     }
     if (error.message === 'Insufficient stock') {
       return res.status(400).json({ message: error.message });
     }
-    res.status(500).json({ message: 'Failed to create order' });
+    res.status(500).json({ message: 'Failed to create order', error: error.message });
   }
 };
 
 const listOrders = async (req, res) => {
   try {
+    console.log('[ORDER] List orders request:', {
+      userId: req.user?.id,
+      query: req.query
+    });
+
     const userId = req.user.id;
     const { status, page = 1, limit = 10 } = req.query;
     const filter = { user_id: userId };
@@ -173,6 +200,8 @@ const listOrders = async (req, res) => {
 
     const total = await Order.countDocuments(filter);
 
+    console.log('[ORDER] Found orders:', { count: orders.length, total });
+
     res.json({
       success: true,
       data: orders,
@@ -183,7 +212,12 @@ const listOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to fetch orders' });
+    console.error('[ORDER] Error listing orders:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id
+    });
+    res.status(500).json({ message: 'Failed to fetch orders', error: error.message });
   }
 };
 

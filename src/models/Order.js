@@ -35,8 +35,8 @@ const orderSchema = new mongoose.Schema(
       enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
       default: 'pending'
     },
-    payment_method: { type: String, enum: ['COD', 'PayU', 'PayPal'], default: 'COD' },
-    payment_status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], default: 'pending' },
+    payment_method: { type: String, enum: ['COD', 'PayU', 'PayPal', 'Stripe'], default: 'COD' },
+    payment_status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded', 'awaiting_payment'], default: 'pending' },
     payment_date: { type: Date },
     payment_details: {
       type: Object,
